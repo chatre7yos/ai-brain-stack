@@ -86,6 +86,62 @@ class BrainCliTests(unittest.TestCase):
             self.assertIn("Verify checkout", out)
             self.assertIn("No auto-actions taken", out)
 
+    def test_triage_reads_domain_contract_state_backlog_and_timeline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.run_cli(root, "init", "--domains", "robbaan")
+            domain = root / "domains" / "robbaan"
+            (domain / "LOOP.md").write_text("""# Robbaan Loop
+
+## Goal
+Protect Robbaan decisions.
+
+## Denied Actions
+- No package model changes.
+- No member-admin feature creation.
+""", encoding="utf-8")
+            (domain / "STATE.md").write_text("""# Robbaan State
+
+## Current Focus
+- Preserve checkout pending flow.
+
+## Blocked / Needs Mike
+- Approve L2 pilot.
+
+## Watch List
+- Credit semantics must not drift.
+""", encoding="utf-8")
+            (domain / "backlog.md").write_text("""# Robbaan Backlog
+
+## Next Safe L1 Actions
+- [ ] Draft verification profile.
+- [ ] Run read-only repo inspection.
+""", encoding="utf-8")
+            (domain / "timeline.md").write_text("""# Robbaan Timeline
+
+## 2026-06-26T00:00:00Z
+- Contract initialized.
+""", encoding="utf-8")
+            before = sorted(str(p.relative_to(root)) for p in root.rglob("*"))
+            out = self.run_cli(root, "triage", "--domain", "robbaan")
+            after = sorted(str(p.relative_to(root)) for p in root.rglob("*"))
+            self.assertEqual(before, after)
+            self.assertIn("## Goal", out)
+            self.assertIn("Protect Robbaan decisions.", out)
+            self.assertIn("## Current Focus", out)
+            self.assertIn("Preserve checkout pending flow", out)
+            self.assertIn("## Blocked / Needs Mike", out)
+            self.assertIn("Approve L2 pilot", out)
+            self.assertIn("## Watch List / Risks", out)
+            self.assertIn("Credit semantics must not drift", out)
+            self.assertIn("## Next Safe Actions", out)
+            self.assertIn("Draft verification profile", out)
+            self.assertIn("## Denied Actions", out)
+            self.assertIn("No package model changes", out)
+            self.assertIn("## Sources Read", out)
+            self.assertIn("domains/robbaan/LOOP.md", out)
+            self.assertIn("domains/robbaan/STATE.md", out)
+
 
 if __name__ == "__main__":
     unittest.main()

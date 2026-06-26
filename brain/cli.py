@@ -198,6 +198,110 @@ def artifacts_for_domain(root: Path, domain: str, kind: str) -> list[Path]:
     return matches
 
 
+def read_text_if_exists(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8", errors="replace")
+
+
+def extract_section(markdown: str, heading: str) -> list[str]:
+    """Return non-empty content lines under a level-2 markdown heading."""
+    lines = markdown.splitlines()
+    capture = False
+    captured: list[str] = []
+    target = f"## {heading}".strip().lower()
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            if capture:
+                break
+            capture = stripped.lower() == target
+            continue
+        if capture and stripped:
+            captured.append(stripped)
+    return captured
+
+
+def print_lines(lines: list[str], limit: int = 8) -> None:
+    visible = [line for line in lines if line not in {"- None yet.", "- None", "None yet."}]
+    if not visible:
+        print("- None")
+        return
+    for line in visible[:limit]:
+        print(line)
+    if len(visible) > limit:
+        print(f"- ... {len(visible) - limit} more")
+
+
+def print_artifact_titles(root: Path, paths: list[Path], limit: int = 10) -> None:
+    if not paths:
+        print("- None")
+        return
+    for path in paths[:limit]:
+        print(f"- {read_title(path)} ({path.relative_to(root)})")
+    if len(paths) > limit:
+        print(f"- ... {len(paths) - limit} more")
+
+
+def print_domain_triage(root: Path, domain: str) -> None:
+    domain_dir = root / "domains" / domain
+    loop_path = domain_dir / "LOOP.md"
+    state_path = domain_dir / "STATE.md"
+    backlog_path = domain_dir / "backlog.md"
+    timeline_path = domain_dir / "timeline.md"
+
+    loop_text = read_text_if_exists(loop_path)
+    state_text = read_text_if_exists(state_path)
+    backlog_text = read_text_if_exists(backlog_path)
+    timeline_text = read_text_if_exists(timeline_path)
+    tasks = artifacts_for_domain(root, domain, "tasks")
+    signals = artifacts_for_domain(root, domain, "signals")
+
+    print(f"# L1 Triage Report — {domain}")
+    print(f"Root: {root}")
+
+    print("\n## Goal")
+    print_lines(extract_section(loop_text, "Goal"), limit=4)
+
+    print("\n## Current Focus")
+    print_lines(extract_section(state_text, "Current Focus"), limit=8)
+
+    print("\n## Blocked / Needs Mike")
+    print_lines(extract_section(state_text, "Blocked / Needs Mike"), limit=8)
+
+    print("\n## Watch List / Risks")
+    watch = extract_section(state_text, "Watch List")
+    denied = extract_section(loop_text, "Denied Actions")
+    print_lines(watch or denied, limit=8)
+
+    print("\n## Next Safe Actions")
+    next_actions = extract_section(backlog_text, "Next Safe L1 Actions") or extract_section(backlog_text, "Next Safe Actions")
+    print_lines(next_actions, limit=10)
+
+    print("\n## Open Tasks")
+    print_artifact_titles(root, tasks)
+
+    print("\n## Signals")
+    print_artifact_titles(root, signals)
+
+    print("\n## Denied Actions")
+    print_lines(denied, limit=10)
+
+    print("\n## Recent Timeline")
+    timeline_entries = [line for line in timeline_text.splitlines() if line.startswith("## ") or line.startswith("- ")]
+    print_lines(timeline_entries[-8:], limit=8)
+
+    print("\n## Sources Read")
+    for path in [loop_path, state_path, backlog_path, timeline_path]:
+        if path.exists():
+            print(f"- {path.relative_to(root)}")
+    for path in tasks[:5] + signals[:5]:
+        print(f"- {path.relative_to(root)}")
+
+    print("\n## Safety")
+    print("- No auto-actions taken. L1 report-only.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="brain", description="Portable Markdown-first AI Brain stack")
     parser.add_argument("--root", default=".", help="AI Brain root folder")
@@ -272,24 +376,7 @@ def main(argv=None) -> None:
         return
 
     if args.command == "triage":
-        tasks = artifacts_for_domain(root, args.domain, "tasks")
-        signals = artifacts_for_domain(root, args.domain, "signals")
-        print(f"# L1 Triage Report — {args.domain}")
-        print(f"Root: {root}")
-        print("\n## Open Tasks")
-        if tasks:
-            for path in tasks[:10]:
-                print(f"- {read_title(path)} ({path.relative_to(root)})")
-        else:
-            print("- None")
-        print("\n## Signals")
-        if signals:
-            for path in signals[:10]:
-                print(f"- {read_title(path)} ({path.relative_to(root)})")
-        else:
-            print("- None")
-        print("\n## Safety")
-        print("- No auto-actions taken. L1 report-only.")
+        print_domain_triage(root, args.domain)
         return
 
     parser.error("Unhandled command")
