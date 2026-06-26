@@ -183,6 +183,13 @@ def read_title(path: Path) -> str:
     return path.stem
 
 
+def artifact_status(text: str) -> str | None:
+    for line in text.splitlines():
+        if line.startswith("status:"):
+            return line.split(":", 1)[1].strip().lower()
+    return None
+
+
 def artifacts_for_domain(root: Path, domain: str, kind: str) -> list[Path]:
     folder = root / "artifacts" / kind
     if not folder.exists():
@@ -193,8 +200,11 @@ def artifacts_for_domain(root: Path, domain: str, kind: str) -> list[Path]:
         if path.name == ".gitkeep":
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        if needle in text:
-            matches.append(path)
+        if needle not in text:
+            continue
+        if kind == "tasks" and artifact_status(text) not in {"open", "new", "pending", "in_progress", None}:
+            continue
+        matches.append(path)
     return matches
 
 

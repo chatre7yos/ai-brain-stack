@@ -86,6 +86,34 @@ class BrainCliTests(unittest.TestCase):
             self.assertIn("Verify checkout", out)
             self.assertIn("No auto-actions taken", out)
 
+    def test_triage_does_not_list_done_tasks_as_open(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.run_cli(root, "init", "--domains", "robbaan")
+            done_task = root / "artifacts" / "tasks" / "done-task.md"
+            done_task.write_text("""---
+type: task
+domain: robbaan
+priority: high
+status: done
+---
+
+# Already closed
+""", encoding="utf-8")
+            open_task = root / "artifacts" / "tasks" / "open-task.md"
+            open_task.write_text("""---
+type: task
+domain: robbaan
+priority: high
+status: open
+---
+
+# Still open
+""", encoding="utf-8")
+            out = self.run_cli(root, "triage", "--domain", "robbaan")
+            self.assertIn("Still open", out)
+            self.assertNotIn("Already closed", out)
+
     def test_triage_reads_domain_contract_state_backlog_and_timeline(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
