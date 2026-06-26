@@ -163,6 +163,33 @@ npm run db:migrate
             self.assertIn("No auto-merge", out)
             self.assertIn("Mike approval required", out)
 
+    def test_approval_pack_output_writes_artifact_without_writing_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            self.run_cli(root, "init", "--domains", "robbaan")
+            (root / "domains" / "robbaan" / "verify.md").write_text("""# Robbaan Verification Profile
+
+## Recommended Future L2 Default Verification
+```bash
+npm test
+npm run build
+```
+""", encoding="utf-8")
+            before_project = sorted(str(p.relative_to(project)) for p in project.rglob("*"))
+            out = self.run_cli(root, "approval-pack", "--domain", "robbaan", "--project", str(project), "--task", "Small UI copy", "--test-output", "not run", "--output", "artifacts")
+            after_project = sorted(str(p.relative_to(project)) for p in project.rglob("*"))
+            self.assertEqual(before_project, after_project)
+            self.assertIn("Saved approval package:", out)
+            files = list((root / "artifacts" / "approval-packs").glob("*.md"))
+            self.assertEqual(1, len(files))
+            text = files[0].read_text(encoding="utf-8")
+            self.assertIn("type: approval-pack", text)
+            self.assertIn("domain: robbaan", text)
+            self.assertIn("Small UI copy", text)
+            self.assertIn("No auto-merge", text)
+
     def test_triage_reads_domain_contract_state_backlog_and_timeline(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
-ARTIFACT_FOLDERS = ["signals", "tasks", "decisions", "bugs", "research", "content-ideas"]
+ARTIFACT_FOLDERS = ["signals", "tasks", "decisions", "bugs", "research", "content-ideas", "approval-packs"]
 DOMAIN_FILES = ["LOOP.md", "STATE.md", "backlog.md", "timeline.md"]
 
 
@@ -343,31 +343,78 @@ def extract_fenced_commands(markdown: str, heading: str | None = None) -> list[s
     return commands
 
 
-def print_approval_pack(root: Path, domain: str, project: Path, task: str, test_output: str = "not run", diff_text: str = "") -> None:
+def render_approval_pack(root: Path, domain: str, project: Path, task: str, test_output: str = "not run", diff_text: str = "") -> str:
     verify_text = read_text_if_exists(root / "domains" / domain / "verify.md")
     level, hits, diff = risk_scan_report(root, domain, project, diff_text)
     commands = extract_fenced_commands(verify_text, "Recommended Future L2 Default Verification") or extract_fenced_commands(verify_text)
-    print(f"# L2 Approval Package — {domain}")
-    print(f"Project: {project}")
-    print(f"Task: {task}")
-    print("\n## Verification Commands From Profile")
-    print_lines([f"- `{command}`" for command in commands[:10]], limit=10)
-    print("\n## Risk Scan")
-    print(f"- Risk Level: {level}")
+    lines = [
+        f"# L2 Approval Package — {domain}",
+        f"Project: {project}",
+        f"Task: {task}",
+        "",
+        "## Verification Commands From Profile",
+    ]
+    command_lines = [f"- `{command}`" for command in commands[:10]]
+    lines.extend(command_lines or ["- None"])
+    lines.extend([
+        "",
+        "## Risk Scan",
+        f"- Risk Level: {level}",
+    ])
     if hits:
-        for hit in hits:
-            print(hit)
+        lines.extend(hits)
     else:
-        print("- No denied-action keywords matched current diff.")
-    print("\n## Test / Build Output")
-    print(f"- {test_output}")
-    print("\n## Required Gates")
-    print("- Separate verifier required.")
-    print("- No auto-merge.")
-    print("- No push/deploy/publish/service start without approval.")
-    print("- Mike approval required.")
-    print("\n## Project Write Safety")
-    print("- No project files modified by approval-pack.")
+        lines.append("- No denied-action keywords matched current diff.")
+    lines.extend([
+        "",
+        "## Test / Build Output",
+        f"- {test_output}",
+        "",
+        "## Required Gates",
+        "- Separate verifier required.",
+        "- No auto-merge.",
+        "- No push/deploy/publish/service start without approval.",
+        "- Mike approval required.",
+        "",
+        "## Project Write Safety",
+        "- No project files modified by approval-pack.",
+    ])
+    return "\n".join(lines) + "\n"
+
+
+def write_approval_pack(root: Path, domain: str, body: str, task: str) -> Path:
+    folder = root / "artifacts" / "approval-packs"
+    folder.mkdir(parents=True, exist_ok=True)
+    now = utc_now()
+    path = folder / f"{now.replace(':', '').replace('-', '')}-{slugify(domain)}-{slugify(task)}.md"
+    content = f"""---
+id: approval-pack-{now.replace(':', '').replace('-', '')}-{slugify(task)}
+type: approval-pack
+domain: {domain}
+status: draft
+source: brain approval-pack
+created_at: {now}
+---
+
+{body}"""
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def print_approval_pack(root: Path, domain: str, project: Path, task: str, test_output: str = "not run", diff_text: str = "", output: str = "") -> None:
+    body = render_approval_pack(root, domain, project, task, test_output, diff_text)
+    if output:
+        if output != "artifacts":
+            path = Path(output).expanduser()
+            if not path.is_absolute():
+                path = root / path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(body, encoding="utf-8")
+        else:
+            path = write_approval_pack(root, domain, body, task)
+        print(f"Saved approval package: {path}")
+        return
+    print(body, end="")
 
 
 def print_domain_triage(root: Path, domain: str) -> None:
@@ -476,6 +523,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_pack.add_argument("--task", required=True)
     p_pack.add_argument("--test-output", default="not run")
     p_pack.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
+    p_pack.add_argument("--output", default="", help="Optional path to save package, or 'artifacts' for artifacts/approval-packs/.")
     return parser
 
 
@@ -510,7 +558,7 @@ def main(argv=None) -> None:
         domains = list_domains(root)
         print(f"AI Brain: {root}")
         print("Domains: " + (", ".join(domains) if domains else "none"))
-        for kind in ["signals", "tasks", "decisions", "bugs", "research", "content-ideas"]:
+        for kind in ARTIFACT_FOLDERS:
             print(f"{kind}: {artifact_count(root, kind)}")
         return
 
@@ -523,7 +571,7 @@ def main(argv=None) -> None:
         return
 
     if args.command == "approval-pack":
-        print_approval_pack(root, args.domain, Path(args.project).expanduser().resolve(), args.task, args.test_output, args.diff)
+        print_approval_pack(root, args.domain, Path(args.project).expanduser().resolve(), args.task, args.test_output, args.diff, args.output)
         return
 
     parser.error("Unhandled command")
