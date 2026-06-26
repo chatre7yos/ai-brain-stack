@@ -253,6 +253,123 @@ def print_artifact_titles(root: Path, paths: list[Path], limit: int = 10) -> Non
         print(f"- ... {len(paths) - limit} more")
 
 
+def project_git_diff(project: Path) -> str:
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--", "."],
+            cwd=project,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            check=False,
+        )
+    except Exception:
+        return ""
+    return result.stdout
+
+
+def risk_keywords_for_denied_action(action: str) -> set[str]:
+    text = action.lower()
+    keywords: set[str] = set()
+    mapping = {
+        "database schema/data": ["db/", "database", "schema", "drizzle", "migration", "migrate", "seed", "sql"],
+        "package model": ["package", "packages", "pricing", "free30", "premium", "boost"],
+        "credit": ["credit", "credit_transactions", "ledger"],
+        "checkout": ["checkout", "pending", "purchase"],
+        "auth/payment/billing": ["auth", "payment", "billing", "session", "otp"],
+        "member-admin": ["member-admin", "member admin", "member"],
+        "public tunnel": ["cloudflared", "tunnel", "vercel", "deploy", "publish"],
+        "service starts": ["dev server", "next dev", "docker", "compose", "webserver"],
+        "secrets": ["secret", ".env", "credential", "token", "key"],
+    }
+    for label, values in mapping.items():
+        if label in text:
+            keywords.update(values)
+    words = re.findall(r"[a-zA-Z_/-]{4,}", text)
+    keywords.update(words[:8])
+    return keywords
+
+
+def risk_scan_report(root: Path, domain: str, project: Path, diff_text: str = "") -> tuple[str, list[str], str]:
+    loop_text = read_text_if_exists(root / "domains" / domain / "LOOP.md")
+    denied = extract_section(loop_text, "Denied Actions")
+    diff = diff_text if diff_text else project_git_diff(project)
+    haystack = diff.lower()
+    hits: list[str] = []
+    for action in denied:
+        keywords = risk_keywords_for_denied_action(action)
+        if any(keyword and keyword.lower() in haystack for keyword in keywords):
+            hits.append(action)
+    level = "high" if hits else ("low" if diff.strip() else "none")
+    return level, hits, diff
+
+
+def print_risk_scan(root: Path, domain: str, project: Path, diff_text: str = "") -> None:
+    level, hits, diff = risk_scan_report(root, domain, project, diff_text)
+    print(f"# Risk Scan — {domain}")
+    print(f"Project: {project}")
+    print(f"Risk Level: {level}")
+    print("\n## Matched Denied Actions")
+    print_lines(hits, limit=20)
+    print("\n## Diff Source")
+    print("- Provided diff text" if diff_text else "- git diff from project")
+    print("\n## Project Write Safety")
+    print("- No project files modified.")
+    print("- No commands executed inside project except read-only git diff when needed.")
+
+
+def extract_fenced_commands(markdown: str, heading: str | None = None) -> list[str]:
+    commands: list[str] = []
+    in_code = False
+    in_heading = heading is None
+    target = f"## {heading}".lower() if heading else ""
+    for line in markdown.splitlines():
+        stripped = line.strip()
+        if heading and stripped.startswith("## "):
+            if in_heading and stripped.lower() != target:
+                break
+            in_heading = stripped.lower() == target
+            continue
+        if not in_heading:
+            continue
+        if stripped.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code and stripped and not stripped.startswith("#"):
+            commands.append(stripped)
+    return commands
+
+
+def print_approval_pack(root: Path, domain: str, project: Path, task: str, test_output: str = "not run", diff_text: str = "") -> None:
+    verify_text = read_text_if_exists(root / "domains" / domain / "verify.md")
+    level, hits, diff = risk_scan_report(root, domain, project, diff_text)
+    commands = extract_fenced_commands(verify_text, "Recommended Future L2 Default Verification") or extract_fenced_commands(verify_text)
+    print(f"# L2 Approval Package — {domain}")
+    print(f"Project: {project}")
+    print(f"Task: {task}")
+    print("\n## Verification Commands From Profile")
+    print_lines([f"- `{command}`" for command in commands[:10]], limit=10)
+    print("\n## Risk Scan")
+    print(f"- Risk Level: {level}")
+    if hits:
+        for hit in hits:
+            print(hit)
+    else:
+        print("- No denied-action keywords matched current diff.")
+    print("\n## Test / Build Output")
+    print(f"- {test_output}")
+    print("\n## Required Gates")
+    print("- Separate verifier required.")
+    print("- No auto-merge.")
+    print("- No push/deploy/publish/service start without approval.")
+    print("- Mike approval required.")
+    print("\n## Project Write Safety")
+    print("- No project files modified by approval-pack.")
+
+
 def print_domain_triage(root: Path, domain: str) -> None:
     domain_dir = root / "domains" / domain
     loop_path = domain_dir / "LOOP.md"
@@ -347,6 +464,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_triage = sub.add_parser("triage", help="Print L1 report for a domain")
     p_triage.add_argument("--domain", required=True)
+
+    p_risk = sub.add_parser("risk-scan", help="Scan diff against domain denied actions")
+    p_risk.add_argument("--domain", required=True)
+    p_risk.add_argument("--project", required=True)
+    p_risk.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
+
+    p_pack = sub.add_parser("approval-pack", help="Print L2 approval package draft")
+    p_pack.add_argument("--domain", required=True)
+    p_pack.add_argument("--project", required=True)
+    p_pack.add_argument("--task", required=True)
+    p_pack.add_argument("--test-output", default="not run")
+    p_pack.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
     return parser
 
 
@@ -387,6 +516,14 @@ def main(argv=None) -> None:
 
     if args.command == "triage":
         print_domain_triage(root, args.domain)
+        return
+
+    if args.command == "risk-scan":
+        print_risk_scan(root, args.domain, Path(args.project).expanduser().resolve(), args.diff)
+        return
+
+    if args.command == "approval-pack":
+        print_approval_pack(root, args.domain, Path(args.project).expanduser().resolve(), args.task, args.test_output, args.diff)
         return
 
     parser.error("Unhandled command")

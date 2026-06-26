@@ -114,6 +114,55 @@ status: open
             self.assertIn("Still open", out)
             self.assertNotIn("Already closed", out)
 
+    def test_risk_scan_flags_project_diff_against_denied_actions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            self.run_cli(root, "init", "--domains", "robbaan")
+            (root / "domains" / "robbaan" / "LOOP.md").write_text("""# Robbaan Loop
+
+## Denied Actions
+- No database schema/data changes.
+- No package model changes.
+- No public tunnel or external write.
+""", encoding="utf-8")
+            out = self.run_cli(root, "risk-scan", "--domain", "robbaan", "--project", str(project), "--diff", "diff --git a/db/schema.ts b/db/schema.ts\n+ package table change")
+            self.assertIn("# Risk Scan — robbaan", out)
+            self.assertIn("Risk Level: high", out)
+            self.assertIn("database schema/data", out)
+            self.assertIn("No project files modified", out)
+
+    def test_approval_pack_prints_package_without_writing_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            self.run_cli(root, "init", "--domains", "robbaan")
+            (root / "domains" / "robbaan" / "verify.md").write_text("""# Robbaan Verification Profile
+
+## Recommended Future L2 Default Verification
+```bash
+npm test
+npm run build
+```
+
+## DB / migration / write checks — require explicit approval
+```bash
+npm run db:migrate
+```
+""", encoding="utf-8")
+            before = sorted(str(p.relative_to(project)) for p in project.rglob("*"))
+            out = self.run_cli(root, "approval-pack", "--domain", "robbaan", "--project", str(project), "--task", "Small UI copy", "--test-output", "not run")
+            after = sorted(str(p.relative_to(project)) for p in project.rglob("*"))
+            self.assertEqual(before, after)
+            self.assertIn("# L2 Approval Package — robbaan", out)
+            self.assertIn("Small UI copy", out)
+            self.assertIn("npm test", out)
+            self.assertNotIn("db:migrate", out)
+            self.assertIn("No auto-merge", out)
+            self.assertIn("Mike approval required", out)
+
     def test_triage_reads_domain_contract_state_backlog_and_timeline(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
