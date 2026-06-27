@@ -1,77 +1,292 @@
 # AI Brain Stack
 
-Portable Markdown-first shared brain for agent loops.
+A small local CLI for keeping AI-agent work organized and safe.
 
-## What this is
-
-A local-first tools stack for keeping agent work portable across Hermes, Claude Code, Codex, n8n, GitHub Actions, and plain terminal scripts.
-
-It stores operational knowledge as Markdown:
+It gives an agent a simple operating system before it touches code:
 
 ```text
-worklog.md
-inbox.md
-artifacts/
-  signals/
-  tasks/
-  decisions/
-  bugs/
-  research/
-  content-ideas/
-domains/
-  <domain>/
-    LOOP.md
-    STATE.md
-    backlog.md
-    timeline.md
+Which project are we working on?
+What is the current state?
+What is allowed?
+What is blocked?
+What should be verified first?
+What needs approval before implementation?
 ```
 
-## Safety default
+The main command is `brain`.
 
-The MVP is **L1 report-only**.
+---
 
-It does not edit application code, commit, push, publish, open tunnels, or touch secrets.
+## Why this exists
 
-## Usage
+AI coding agents often fail in boring but expensive ways:
 
-Short form after linking `bin/brain` into PATH:
+- they forget project context
+- they jump into the wrong repo
+- they keep working outside the requested scope
+- they make changes before checking risk
+- they do not leave a useful handoff for the next run
+
+AI Brain Stack solves that by storing project memory as Markdown files and exposing a small CLI around them.
+
+It is not another chat app. It is not an autonomous agent by itself.
+
+It is the **control layer** an agent reads before acting.
+
+---
+
+## Mental model
+
+```text
+ai-brain-stack  = the tool / CLI / templates
+my-brain-folder = your private project memory and run logs
+```
+
+This repo is the tool.
+
+Your actual project state lives in a separate folder, for example:
+
+```text
+~/ai-brain
+```
+
+That private brain folder can contain sensitive project notes, so it should usually stay private.
+
+---
+
+## What the CLI does
+
+| Command | Purpose |
+|---|---|
+| `brain projects` | List active projects from `ACTIVE.md` |
+| `brain audit` | Check whether the brain folder is healthy |
+| `brain triage --domain <name>` | Read a project/domain and print a safe L1 report |
+| `brain risk-scan --domain <name> --project <path>` | Check current git diff against denied actions |
+| `brain approval-pack ...` | Draft an approval package before L2 implementation |
+| `brain init-domain ...` | Create a new project/domain skeleton |
+| `brain run-log ...` | Track loop runs, cost, and tokens |
+| `brain budget ...` | Track a lightweight monthly budget |
+
+Most commands also support `--json` for automation.
+
+---
+
+## Install / local setup
+
+Clone the repo:
+
+```bash
+git clone https://github.com/chatre7yos/ai-brain-stack.git
+cd ai-brain-stack
+```
+
+Run tests:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Use module form without installing anything:
+
+```bash
+python3 -m brain.cli --root ~/ai-brain init
+python3 -m brain.cli --root ~/ai-brain status
+```
+
+Optional shortcut:
+
+```bash
+mkdir -p ~/.local/bin
+ln -sfn "$PWD/bin/brain" ~/.local/bin/brain
+```
+
+Then:
+
+```bash
+brain --root ~/ai-brain status
+```
+
+By default, `bin/brain` uses:
+
+```text
+$HOME/ai-brain
+```
+
+Override it with:
+
+```bash
+AI_BRAIN_ROOT=/path/to/brain brain projects
+```
+
+---
+
+## Quickstart
+
+Create a private brain folder:
+
+```bash
+brain --root ~/ai-brain init
+```
+
+Create your first project/domain:
+
+```bash
+brain --root ~/ai-brain init-domain \
+  --domain my-project \
+  --path /path/to/my-project \
+  --active
+```
+
+Check the brain:
+
+```bash
+brain --root ~/ai-brain audit
+```
+
+Start a safe read-only loop:
+
+```bash
+brain --root ~/ai-brain projects
+brain --root ~/ai-brain triage --domain my-project
+brain --root ~/ai-brain risk-scan --domain my-project --project /path/to/my-project
+```
+
+Record the run:
+
+```bash
+brain --root ~/ai-brain run-log add \
+  --domain my-project \
+  --summary "First read-only check" \
+  --status success
+```
+
+---
+
+## Folder structure created by a brain
+
+A brain folder is Markdown-first:
+
+```text
+~/ai-brain/
+  ACTIVE.md
+  worklog.md
+  loop-run-log.md
+  loop-budget.md
+  artifacts/
+    signals/
+    tasks/
+    decisions/
+    bugs/
+    research/
+    content-ideas/
+    approval-packs/
+  domains/
+    my-project/
+      LOOP.md
+      STATE.md
+      backlog.md
+      timeline.md
+      verify.md
+```
+
+The important files are:
+
+| File | Meaning |
+|---|---|
+| `ACTIVE.md` | Which projects are currently active |
+| `LOOP.md` | Goal, allowed actions, denied actions |
+| `STATE.md` | Current focus and blockers |
+| `backlog.md` | Next safe actions |
+| `timeline.md` | Recent history |
+| `verify.md` | How to verify safely |
+
+---
+
+## Safety levels
+
+AI Brain Stack is designed around safety gates:
+
+```text
+L1 = read-only report / triage / risk scan
+L2 = assisted implementation only after approval package
+L3 = unattended automation; not recommended by default
+```
+
+The default is L1.
+
+That means the agent should read, report, and verify before writing code.
+
+---
+
+## Example daily workflow
+
+When you say “continue this project” to an agent, the intended flow is:
 
 ```bash
 brain projects
 brain audit
-brain status
-brain init-domain --domain new-project --path /home/mike/projects/new-project --active
-brain run-log add --domain ai-brain-stack --summary "Finished audit" --cost 0.25 --tokens 1200
-brain run-log summary
-brain budget set --monthly-usd 20 --notes "MVP cap"
-brain budget status
-brain triage --domain robbaan
-brain risk-scan --domain robbaan --project /home/mike/projects/robbaan
-brain approval-pack --domain robbaan --project /home/mike/projects/robbaan --task "admin listing row"
+brain triage --domain <active-project>
+brain risk-scan --domain <active-project> --project <project-path>
 ```
 
-The shortcut defaults to `$HOME/ai-brain`; override with `AI_BRAIN_ROOT=/path/to/brain` or pass `--root` explicitly.
+Only after that should the agent propose or execute the next safe action.
 
-Module form still works everywhere:
+If implementation is needed, create an approval package first:
 
 ```bash
-python3 -m brain.cli --root ./my-brain init --domains robbaan kliktan video-os
-python3 -m brain.cli --root ./my-brain log --domain robbaan --message "Checked state"
-python3 -m brain.cli --root ./my-brain signal add --domain video-os --title "Trend" --body "Observation" --priority high
-python3 -m brain.cli --root ./my-brain task add --domain robbaan --title "Define LOOP" --body "Write allowed/denied actions" --priority high
-python3 -m brain.cli --root ./my-brain status
-python3 -m brain.cli --root ./my-brain triage --domain robbaan
+brain approval-pack \
+  --domain <active-project> \
+  --project <project-path> \
+  --task "small scoped task"
 ```
 
-See:
+---
 
-- `docs/usage.md` for shortcut installation and examples.
-- `docs/daily-usage.md` for the daily `ทำต่อ` workflow.
+## JSON automation
 
-## For other agents
+Use JSON output for cron jobs, n8n, CI, or other agents:
 
-Tell any agent:
+```bash
+brain projects --json
+brain audit --json
+brain triage --domain my-project --json
+brain risk-scan --domain my-project --project /path/to/my-project --json
+brain approval-pack --domain my-project --project /path/to/my-project --task "small task" --json
+brain run-log summary --json
+brain budget status --json
+```
+
+---
+
+## What this is not
+
+AI Brain Stack is not:
+
+- a hosted SaaS
+- a vector database
+- an autonomous agent runtime
+- a replacement for GitHub Issues or Linear
+- a tool that magically understands your project without Markdown state
+
+It is a small local control layer for safer agent loops.
+
+---
+
+## Repository contents
 
 ```text
-Read domains/<domain>/LOOP.md, STATE.md, backlog.md, timeline.md, then run L1 triage only. Do not edit code or perform external writes.
+bin/brain             CLI wrapper
+brain/cli.py          Main Python CLI
+docs/usage.md         CLI examples
+docs/daily-usage.md   Daily workflow guide
+templates/            Starter Markdown templates
+tests/test_cli.py     Test suite
 ```
+
+---
+
+## Current status
+
+This is an MVP.
+
+It is ready for local/private use as a project-control layer. Public packaging, hosted docs, and broader starter templates can come later.
