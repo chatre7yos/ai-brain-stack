@@ -245,6 +245,53 @@ Protect Robbaan decisions.
             self.assertIn("## Sources Read", out)
             self.assertIn("domains/robbaan/LOOP.md", out)
             self.assertIn("domains/robbaan/STATE.md", out)
+    def test_machine_readable_json_outputs_for_loop_automation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import json
+
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            self.run_cli(root, "init", "--domains", "robbaan")
+            (root / "domains" / "robbaan" / "LOOP.md").write_text("""# Robbaan Loop
+
+## Goal
+Protect scope.
+
+## Denied Actions
+- No database schema/data changes.
+""", encoding="utf-8")
+            (root / "domains" / "robbaan" / "STATE.md").write_text("""# Robbaan State
+
+## Current Focus
+- L2-ready only.
+""", encoding="utf-8")
+            (root / "domains" / "robbaan" / "backlog.md").write_text("""# Robbaan Backlog
+
+## Next Safe Actions
+- [ ] Draft pilot.
+""", encoding="utf-8")
+            (root / "domains" / "robbaan" / "verify.md").write_text("""# Verify
+
+## Recommended Future L2 Default Verification
+```bash
+npm test
+```
+""", encoding="utf-8")
+            status = json.loads(self.run_cli(root, "status", "--json"))
+            self.assertEqual(["robbaan"], status["domains"])
+            self.assertIn("tasks", status["artifacts"])
+            triage = json.loads(self.run_cli(root, "triage", "--domain", "robbaan", "--json"))
+            self.assertEqual("robbaan", triage["domain"])
+            self.assertIn("Protect scope.", triage["goal"])
+            self.assertEqual([], triage["open_tasks"])
+            risk = json.loads(self.run_cli(root, "risk-scan", "--domain", "robbaan", "--project", str(project), "--diff", "+ db/schema.ts", "--json"))
+            self.assertEqual("high", risk["risk_level"])
+            self.assertFalse(risk["project_write_safety"]["project_files_modified"])
+            pack = json.loads(self.run_cli(root, "approval-pack", "--domain", "robbaan", "--project", str(project), "--task", "Pilot", "--test-output", "not run", "--json"))
+            self.assertEqual("Pilot", pack["task"])
+            self.assertIn("npm test", pack["verification_commands"])
+            self.assertIn("Mike approval required.", pack["required_gates"])
 
 
 if __name__ == "__main__":

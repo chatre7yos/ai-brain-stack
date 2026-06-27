@@ -7,6 +7,7 @@ Claude Code, Codex, GitHub Actions, n8n shell steps, or plain terminal users.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -176,6 +177,18 @@ def artifact_count(root: Path, kind: str) -> int:
     return len([p for p in folder.glob("*.md") if p.name != ".gitkeep"])
 
 
+def status_data(root: Path) -> dict:
+    return {
+        "root": str(root),
+        "domains": list_domains(root),
+        "artifacts": {kind: artifact_count(root, kind) for kind in ARTIFACT_FOLDERS},
+    }
+
+
+def print_json(data: dict) -> None:
+    print(json.dumps(data, ensure_ascii=False, indent=2))
+
+
 def read_title(path: Path) -> str:
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("# "):
@@ -307,13 +320,29 @@ def risk_scan_report(root: Path, domain: str, project: Path, diff_text: str = ""
     return level, hits, diff
 
 
-def print_risk_scan(root: Path, domain: str, project: Path, diff_text: str = "") -> None:
+def risk_scan_data(root: Path, domain: str, project: Path, diff_text: str = "") -> dict:
     level, hits, diff = risk_scan_report(root, domain, project, diff_text)
+    return {
+        "domain": domain,
+        "project": str(project),
+        "risk_level": level,
+        "matched_denied_actions": hits,
+        "diff_source": "provided" if diff_text else "git_diff",
+        "has_diff": bool(diff.strip()),
+        "project_write_safety": {
+            "project_files_modified": False,
+            "commands_executed": "read-only git diff only when needed",
+        },
+    }
+
+
+def print_risk_scan(root: Path, domain: str, project: Path, diff_text: str = "") -> None:
+    data = risk_scan_data(root, domain, project, diff_text)
     print(f"# Risk Scan — {domain}")
     print(f"Project: {project}")
-    print(f"Risk Level: {level}")
+    print(f"Risk Level: {data['risk_level']}")
     print("\n## Matched Denied Actions")
-    print_lines(hits, limit=20)
+    print_lines(data["matched_denied_actions"], limit=20)
     print("\n## Diff Source")
     print("- Provided diff text" if diff_text else "- git diff from project")
     print("\n## Project Write Safety")
@@ -380,6 +409,31 @@ def render_approval_pack(root: Path, domain: str, project: Path, task: str, test
         "- No project files modified by approval-pack.",
     ])
     return "\n".join(lines) + "\n"
+
+
+def approval_pack_data(root: Path, domain: str, project: Path, task: str, test_output: str = "not run", diff_text: str = "") -> dict:
+    verify_text = read_text_if_exists(root / "domains" / domain / "verify.md")
+    level, hits, diff = risk_scan_report(root, domain, project, diff_text)
+    commands = extract_fenced_commands(verify_text, "Recommended Future L2 Default Verification") or extract_fenced_commands(verify_text)
+    return {
+        "domain": domain,
+        "project": str(project),
+        "task": task,
+        "verification_commands": commands[:10],
+        "risk_scan": {
+            "risk_level": level,
+            "matched_denied_actions": hits,
+            "has_diff": bool(diff.strip()),
+        },
+        "test_output": test_output,
+        "required_gates": [
+            "Separate verifier required.",
+            "No auto-merge.",
+            "No push/deploy/publish/service start without approval.",
+            "Mike approval required.",
+        ],
+        "project_write_safety": {"project_files_modified": False},
+    }
 
 
 def write_approval_pack(root: Path, domain: str, body: str, task: str) -> Path:
@@ -476,6 +530,37 @@ def print_domain_triage(root: Path, domain: str) -> None:
     print("- No auto-actions taken. L1 report-only.")
 
 
+def domain_triage_data(root: Path, domain: str) -> dict:
+    domain_dir = root / "domains" / domain
+    loop_path = domain_dir / "LOOP.md"
+    state_path = domain_dir / "STATE.md"
+    backlog_path = domain_dir / "backlog.md"
+    timeline_path = domain_dir / "timeline.md"
+
+    loop_text = read_text_if_exists(loop_path)
+    state_text = read_text_if_exists(state_path)
+    backlog_text = read_text_if_exists(backlog_path)
+    timeline_text = read_text_if_exists(timeline_path)
+    tasks = artifacts_for_domain(root, domain, "tasks")
+    signals = artifacts_for_domain(root, domain, "signals")
+    sources = [path.relative_to(root).as_posix() for path in [loop_path, state_path, backlog_path, timeline_path] if path.exists()]
+    return {
+        "domain": domain,
+        "root": str(root),
+        "goal": extract_section(loop_text, "Goal"),
+        "current_focus": extract_section(state_text, "Current Focus"),
+        "blocked_needs_mike": extract_section(state_text, "Blocked / Needs Mike"),
+        "watch_list_risks": extract_section(state_text, "Watch List") or extract_section(loop_text, "Denied Actions"),
+        "next_safe_actions": extract_section(backlog_text, "Next Safe L1 Actions") or extract_section(backlog_text, "Next Safe Actions"),
+        "open_tasks": [{"title": read_title(path), "path": path.relative_to(root).as_posix()} for path in tasks],
+        "signals": [{"title": read_title(path), "path": path.relative_to(root).as_posix()} for path in signals],
+        "denied_actions": extract_section(loop_text, "Denied Actions"),
+        "recent_timeline": [line for line in timeline_text.splitlines() if line.startswith("## ") or line.startswith("- ")][-8:],
+        "sources_read": sources,
+        "safety": "No auto-actions taken. L1 report-only.",
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="brain", description="Portable Markdown-first AI Brain stack")
     parser.add_argument("--root", default=".", help="AI Brain root folder")
@@ -485,6 +570,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_init.add_argument("--domains", nargs="*", default=[])
 
     p_status = sub.add_parser("status", help="Show domains and artifact counts")
+    p_status.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
     p_log = sub.add_parser("log", help="Append to worklog")
     p_log.add_argument("--domain", required=True)
@@ -511,11 +597,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_triage = sub.add_parser("triage", help="Print L1 report for a domain")
     p_triage.add_argument("--domain", required=True)
+    p_triage.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
     p_risk = sub.add_parser("risk-scan", help="Scan diff against domain denied actions")
     p_risk.add_argument("--domain", required=True)
     p_risk.add_argument("--project", required=True)
     p_risk.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
+    p_risk.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
     p_pack = sub.add_parser("approval-pack", help="Print L2 approval package draft")
     p_pack.add_argument("--domain", required=True)
@@ -524,6 +612,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_pack.add_argument("--test-output", default="not run")
     p_pack.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
     p_pack.add_argument("--output", default="", help="Optional path to save package, or 'artifacts' for artifacts/approval-packs/.")
+    p_pack.add_argument("--json", action="store_true", help="Print machine-readable JSON; cannot be combined with --output")
     return parser
 
 
@@ -555,23 +644,39 @@ def main(argv=None) -> None:
         return
 
     if args.command == "status":
-        domains = list_domains(root)
+        data = status_data(root)
+        if args.json:
+            print_json(data)
+            return
         print(f"AI Brain: {root}")
-        print("Domains: " + (", ".join(domains) if domains else "none"))
+        print("Domains: " + (", ".join(data["domains"]) if data["domains"] else "none"))
         for kind in ARTIFACT_FOLDERS:
-            print(f"{kind}: {artifact_count(root, kind)}")
+            print(f"{kind}: {data['artifacts'][kind]}")
         return
 
     if args.command == "triage":
+        if args.json:
+            print_json(domain_triage_data(root, args.domain))
+            return
         print_domain_triage(root, args.domain)
         return
 
     if args.command == "risk-scan":
-        print_risk_scan(root, args.domain, Path(args.project).expanduser().resolve(), args.diff)
+        project = Path(args.project).expanduser().resolve()
+        if args.json:
+            print_json(risk_scan_data(root, args.domain, project, args.diff))
+            return
+        print_risk_scan(root, args.domain, project, args.diff)
         return
 
     if args.command == "approval-pack":
-        print_approval_pack(root, args.domain, Path(args.project).expanduser().resolve(), args.task, args.test_output, args.diff, args.output)
+        if args.json and args.output:
+            parser.error("approval-pack --json cannot be combined with --output")
+        project = Path(args.project).expanduser().resolve()
+        if args.json:
+            print_json(approval_pack_data(root, args.domain, project, args.task, args.test_output, args.diff))
+            return
+        print_approval_pack(root, args.domain, project, args.task, args.test_output, args.diff, args.output)
         return
 
     parser.error("Unhandled command")
