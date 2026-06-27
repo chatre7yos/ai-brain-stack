@@ -69,6 +69,10 @@ That private brain folder can contain sensitive project notes, so it should usua
 
 Most commands also support `--json` for automation.
 
+Agent examples:
+
+- `docs/agent-examples.md` shows how to use AI Brain Stack with Codex, Claude Code, and agy.
+
 ---
 
 ## Install / local setup
@@ -320,6 +324,7 @@ bin/brain             CLI wrapper
 brain/cli.py          Main Python CLI
 docs/usage.md         CLI examples
 docs/daily-usage.md   Daily workflow guide
+docs/agent-examples.md Agent handoff examples for Codex, Claude Code, and agy
 templates/            Starter Markdown templates
 tests/test_cli.py     Test suite
 ```
