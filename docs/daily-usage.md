@@ -7,6 +7,10 @@ Use this when Mike says `ทำต่อ`, when starting a work session, or when
 Default focus comes from:
 
 ```bash
+brain next
+# or
+brain ทำต่อ
+# manual check
 brain projects
 ```
 
@@ -59,6 +63,10 @@ If the scan reports high risk, stop and ask Mike.
 When the domain and project path are clear, run one full safe L1 loop step:
 
 ```bash
+brain next
+# or
+brain ทำต่อ
+# explicit target
 brain loop run --domain <domain> --project <project-path> --once
 ```
 
@@ -117,6 +125,7 @@ While `ai-brain-stack` is the active focus:
 ```bash
 brain projects --json
 brain audit --json
+brain next --json
 brain triage --domain ai-brain-stack --json
 brain risk-scan --domain <domain> --project <project-path> --json
 brain loop run --domain <domain> --project <project-path> --once --json
@@ -170,6 +179,10 @@ brain projects
 Equivalent one-command L1 version:
 
 ```text
+brain next
+# or
+brain ทำต่อ
+# explicit target
 brain loop run --domain <active> --project <project-path> --once
 → inspect status/risk/next
 → stop unless implementation is explicitly approved

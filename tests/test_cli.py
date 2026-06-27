@@ -447,6 +447,36 @@ Protect Robbaan decisions.
             run_log = (root / "loop-run-log.md").read_text(encoding="utf-8")
             self.assertIn("status: blocked", run_log)
 
+    def test_next_shortcut_uses_first_active_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import json
+
+            root = Path(tmp) / "brain"
+            project = Path(tmp) / "project"
+            project.mkdir()
+            self.run_cli(root, "init-domain", "--domain", "demo", "--path", str(project), "--active")
+
+            out = self.run_cli(root, "next")
+            self.assertIn("# Loop Run — demo", out)
+            self.assertIn(f"Project: {project.resolve()}", out)
+            self.assertIn("Risk Level: none", out)
+            self.assertIn("Run log:", out)
+
+            data = json.loads(self.run_cli(root, "next", "--json"))
+            self.assertEqual("demo", data["domain"])
+            self.assertEqual(str(project.resolve()), data["project"])
+
+    def test_thai_continue_alias_uses_first_active_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "brain"
+            project = Path(tmp) / "project"
+            project.mkdir()
+            self.run_cli(root, "init-domain", "--domain", "demo", "--path", str(project), "--active")
+
+            out = self.run_cli(root, "ทำต่อ")
+            self.assertIn("# Loop Run — demo", out)
+            self.assertIn("Mode: once", out)
+
     def test_bin_brain_uses_env_default_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

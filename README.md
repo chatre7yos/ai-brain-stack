@@ -58,7 +58,9 @@ That private brain folder can contain sensitive project notes, so it should usua
 
 | Command | Purpose |
 |---|---|
-| `brain projects` | List active projects from `ACTIVE.md` |
+| `brain projects` | Show active projects from `ACTIVE.md` |
+| `brain next` | Run one safe L1 loop for the first active project |
+| `brain ทำต่อ` | Thai alias for `brain next` |
 | `brain audit` | Check whether the brain folder is healthy |
 | `brain triage --domain <name>` | Read a project/domain and print a safe L1 report |
 | `brain risk-scan --domain <name> --project <path>` | Check current git diff against denied actions |
@@ -239,15 +241,31 @@ That means the agent should read, report, and verify before writing code.
 When you say “continue this project” to an agent, the intended flow is:
 
 ```bash
+brain next
+```
+
+Thai alias:
+
+```bash
+brain ทำต่อ
+```
+
+This reads the first active project from `ACTIVE.md`, runs audit + triage + risk scan, writes a run-log entry, and stops.
+
+Verbose/manual form:
+
+```bash
 brain projects
 brain audit
-brain triage --domain <active-project>
-brain risk-scan --domain <active-project> --project <project-path>
+brain triage --domain my-project
+brain risk-scan --domain my-project --project /path/to/my-project
 ```
 
 Shortcut form:
 
 ```bash
+brain next
+brain ทำต่อ
 brain loop run --domain <active-project> --project <project-path> --once
 ```
 
@@ -271,6 +289,7 @@ Use JSON output for cron jobs, n8n, CI, or other agents:
 ```bash
 brain projects --json
 brain audit --json
+brain next --json
 brain triage --domain my-project --json
 brain risk-scan --domain my-project --project /path/to/my-project --json
 brain loop run --domain my-project --project /path/to/my-project --once --json

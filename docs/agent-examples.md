@@ -32,6 +32,10 @@ brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/
 
 Optional one-command L1 loop:
 
+brain --root /path/to/ai-brain next
+# or
+brain --root /path/to/ai-brain ทำต่อ
+# explicit target
 brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
 
 Rules:
@@ -67,6 +71,10 @@ brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/
 
 Optional one-command L1 loop:
 
+brain --root /path/to/ai-brain next
+# or
+brain --root /path/to/ai-brain ทำต่อ
+# explicit target
 brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
 
 Do L1 report-only. Do not edit files. Do not commit/push/deploy.
@@ -101,6 +109,10 @@ brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/
 
 Optional one-command L1 loop:
 
+brain --root /path/to/ai-brain next
+# or
+brain --root /path/to/ai-brain ทำต่อ
+# explicit target
 brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
 
 Stay L1 report-only. Do not edit files. Do not commit, push, deploy, start services, or touch secrets.
@@ -142,6 +154,10 @@ brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/
 
 Optional one-command L1 loop:
 
+brain --root /path/to/ai-brain next
+# or
+brain --root /path/to/ai-brain ทำต่อ
+# explicit target
 brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
 
 Do not edit files. Do not commit/push/deploy. Do not touch secrets.

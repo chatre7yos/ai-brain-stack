@@ -6,6 +6,8 @@ Install or symlink `bin/brain` into your PATH, then use:
 
 ```bash
 brain projects
+brain next
+brain ทำต่อ
 brain audit
 brain status
 brain loop run --domain ai-brain-stack --project /home/mike/projects/ai-brain-stack --once
@@ -43,5 +45,7 @@ brain --root /home/mike/ai-brain projects
 `projects`, `status`, `triage`, and `risk-scan` are read/report oriented. `approval-pack --output artifacts` writes only under the AI Brain artifacts folder, not the target project.
 
 `loop run --once` runs one safe L1 loop step: audit, triage, risk scan, and run-log entry. It does not edit target project files.
+
+For day-to-day use, prefer `brain next` or `brain ทำต่อ`. Those shortcuts read the first active project from `ACTIVE.md` so you do not have to type `--domain` and `--project` every time.
 
 For the day-to-day `ทำต่อ` workflow, see `docs/daily-usage.md`.

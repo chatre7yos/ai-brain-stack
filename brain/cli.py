@@ -324,6 +324,26 @@ def print_projects(root: Path) -> None:
         print(f"- {item['domain']} — {item['path_scope']} — {item['status']} — {item['next_safe_action']}")
 
 
+def first_path_from_scope(path_scope: str) -> str:
+    return path_scope.split(" + ", 1)[0].strip()
+
+
+def resolve_active_loop_target(root: Path, domain: str = "", project: str = "") -> tuple[str, Path]:
+    projects = active_projects_data(root)["projects"]
+    selected = None
+    if domain:
+        selected = next((item for item in projects if item["domain"] == domain), None)
+    elif projects:
+        selected = projects[0]
+    resolved_domain = domain or (selected["domain"] if selected else "")
+    resolved_project = project or (first_path_from_scope(selected["path_scope"]) if selected else "")
+    if not resolved_domain:
+        raise SystemExit("No active domain found. Run: brain init-domain --domain <name> --path <path> --active")
+    if not resolved_project:
+        raise SystemExit("No project path found. Pass --project <path> or update ACTIVE.md.")
+    return resolved_domain, Path(resolved_project).expanduser().resolve()
+
+
 def is_filesystem_path(value: str) -> bool:
     return value.startswith("/") or value.startswith("~/")
 
@@ -965,6 +985,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_loop_run.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
     p_loop_run.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
+    for shortcut_name in ["next", "ทำต่อ"]:
+        p_shortcut = sub.add_parser(shortcut_name, help="Run one safe L1 loop for the first active project")
+        p_shortcut.add_argument("--domain", default="", help="Optional active domain override")
+        p_shortcut.add_argument("--project", default="", help="Optional project path override")
+        p_shortcut.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
+        p_shortcut.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
     p_run_log = sub.add_parser("run-log", help="Manage loop run log")
     run_log_sub = p_run_log.add_subparsers(dest="run_log_command", required=True)
     p_run_log_add = run_log_sub.add_parser("add", help="Append a loop run entry")
@@ -1090,6 +1117,15 @@ def main(argv=None) -> None:
     if args.command == "loop" and args.loop_command == "run":
         project = Path(args.project).expanduser().resolve()
         data = loop_run_once_data(root, args.domain, project, args.diff, write_log=True)
+        if args.json:
+            print_json(data)
+            return
+        print_loop_run_once(data)
+        return
+
+    if args.command in {"next", "ทำต่อ"}:
+        domain, project = resolve_active_loop_target(root, args.domain, args.project)
+        data = loop_run_once_data(root, domain, project, args.diff, write_log=True)
         if args.json:
             print_json(data)
             return
