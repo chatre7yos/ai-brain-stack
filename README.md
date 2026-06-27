@@ -19,6 +19,7 @@ The main command is `brain`.
 
 New here? Start with `docs/QUICKSTART.md`.
 Need navigation? Use `docs/MAP.md`.
+Agent or contributor? Read `AGENTS.md` first.
 
 ---
 
@@ -407,6 +408,7 @@ It is a small local control layer for safer agent loops.
 ```text
 bin/brain             CLI wrapper
 brain/cli.py          Main Python CLI
+AGENTS.md             Guardrails for agents and contributors
 CONTEXT.md            Shared language for agents and contributors
 docs/QUICKSTART.md    5-minute setup path for new users
 docs/MAP.md           Repo navigation map

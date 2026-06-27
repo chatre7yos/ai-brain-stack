@@ -7,6 +7,7 @@ Use this file to decide where to read or write next. It keeps the repo from turn
 | Need | File |
 |---|---|
 | Set up in 5 minutes | `docs/QUICKSTART.md` |
+| Agent/contributor guardrails | `AGENTS.md` |
 | Understand what this repo is | `README.md` |
 | Understand the shared vocabulary | `CONTEXT.md` |
 | Know where things live | `docs/MAP.md` |
