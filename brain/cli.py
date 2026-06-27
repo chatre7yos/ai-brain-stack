@@ -397,6 +397,102 @@ def print_json(data: dict) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2))
 
 
+def write_run_log(root: Path, domain: str, summary: str, status: str = "success", cost: str = "0", tokens: str = "0") -> Path:
+    path = root / "loop-run-log.md"
+    ensure_file(path, "# Loop Run Log\n\n")
+    cost_value = float(cost or 0)
+    token_value = int(tokens or 0)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(f"## {utc_now()}\n")
+        f.write(f"- domain: {domain}\n")
+        f.write(f"- status: {status}\n")
+        f.write(f"- cost_usd: {cost_value:.2f}\n")
+        f.write(f"- tokens: {token_value}\n")
+        f.write(f"- summary: {summary}\n\n")
+    return path
+
+
+def run_log_summary_data(root: Path) -> dict:
+    path = root / "loop-run-log.md"
+    if not path.exists():
+        return {"root": str(root), "runs": 0, "total_cost_usd": 0.0, "total_tokens": 0}
+    runs = 0
+    total_cost = 0.0
+    total_tokens = 0
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            runs += 1
+        elif stripped.startswith("- cost_usd:"):
+            try:
+                total_cost += float(stripped.split(":", 1)[1].strip())
+            except ValueError:
+                pass
+        elif stripped.startswith("- tokens:"):
+            try:
+                total_tokens += int(float(stripped.split(":", 1)[1].strip()))
+            except ValueError:
+                pass
+    return {"root": str(root), "runs": runs, "total_cost_usd": round(total_cost, 2), "total_tokens": total_tokens}
+
+
+def print_run_log_summary(root: Path) -> None:
+    data = run_log_summary_data(root)
+    print("# Loop Run Log Summary")
+    print(f"Root: {root}")
+    print(f"Runs: {data['runs']}")
+    print(f"Total cost USD: {data['total_cost_usd']:.2f}")
+    print(f"Total tokens: {data['total_tokens']}")
+
+
+def set_budget(root: Path, monthly_usd: str, notes: str = "") -> Path:
+    path = root / "loop-budget.md"
+    monthly = float(monthly_usd)
+    content = f"""# Loop Budget
+
+monthly_usd: {monthly:.2f}
+notes: {notes}
+updated_at: {utc_now()}
+"""
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def read_budget(root: Path) -> dict:
+    path = root / "loop-budget.md"
+    monthly = 0.0
+    notes = ""
+    if path.exists():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.startswith("monthly_usd:"):
+                try:
+                    monthly = float(line.split(":", 1)[1].strip())
+                except ValueError:
+                    monthly = 0.0
+            elif line.startswith("notes:"):
+                notes = line.split(":", 1)[1].strip()
+    spent = run_log_summary_data(root)["total_cost_usd"]
+    remaining = round(monthly - spent, 2)
+    return {
+        "root": str(root),
+        "monthly_budget_usd": round(monthly, 2),
+        "spent_usd": round(spent, 2),
+        "remaining_usd": remaining,
+        "notes": notes,
+    }
+
+
+def print_budget_status(root: Path) -> None:
+    data = read_budget(root)
+    print("# Loop Budget Status")
+    print(f"Root: {root}")
+    print(f"Monthly budget USD: {data['monthly_budget_usd']:.2f}")
+    print(f"Spent USD: {data['spent_usd']:.2f}")
+    print(f"Remaining USD: {data['remaining_usd']:.2f}")
+    if data["notes"]:
+        print(f"Notes: {data['notes']}")
+
+
 def read_title(path: Path) -> str:
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("# "):
@@ -793,6 +889,25 @@ def build_parser() -> argparse.ArgumentParser:
     p_audit = sub.add_parser("audit", help="Audit active brain readiness")
     p_audit.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
+    p_run_log = sub.add_parser("run-log", help="Manage loop run log")
+    run_log_sub = p_run_log.add_subparsers(dest="run_log_command", required=True)
+    p_run_log_add = run_log_sub.add_parser("add", help="Append a loop run entry")
+    p_run_log_add.add_argument("--domain", required=True)
+    p_run_log_add.add_argument("--summary", required=True)
+    p_run_log_add.add_argument("--status", default="success")
+    p_run_log_add.add_argument("--cost", default="0")
+    p_run_log_add.add_argument("--tokens", default="0")
+    p_run_log_summary = run_log_sub.add_parser("summary", help="Summarize loop runs")
+    p_run_log_summary.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
+    p_budget = sub.add_parser("budget", help="Manage loop budget")
+    budget_sub = p_budget.add_subparsers(dest="budget_command", required=True)
+    p_budget_set = budget_sub.add_parser("set", help="Set monthly budget")
+    p_budget_set.add_argument("--monthly-usd", required=True)
+    p_budget_set.add_argument("--notes", default="")
+    p_budget_status = budget_sub.add_parser("status", help="Show budget status")
+    p_budget_status.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
     p_log = sub.add_parser("log", help="Append to worklog")
     p_log.add_argument("--domain", required=True)
     p_log.add_argument("--message", required=True)
@@ -895,6 +1010,30 @@ def main(argv=None) -> None:
             return
         print_audit(root)
         return
+
+    if args.command == "run-log":
+        if args.run_log_command == "add":
+            path = write_run_log(root, args.domain, args.summary, args.status, args.cost, args.tokens)
+            print(f"Logged run: {path}")
+            return
+        if args.run_log_command == "summary":
+            if args.json:
+                print_json(run_log_summary_data(root))
+                return
+            print_run_log_summary(root)
+            return
+
+    if args.command == "budget":
+        if args.budget_command == "set":
+            path = set_budget(root, args.monthly_usd, args.notes)
+            print(f"Set budget: {path}")
+            return
+        if args.budget_command == "status":
+            if args.json:
+                print_json(read_budget(root))
+                return
+            print_budget_status(root)
+            return
 
     if args.command == "triage":
         if args.json:

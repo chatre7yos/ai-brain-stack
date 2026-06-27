@@ -316,6 +316,56 @@ Protect Robbaan decisions.
             self.assertIn("Initialized domain: existing", out)
             self.assertEqual("# Keep Me\n", loop.read_text(encoding="utf-8"))
 
+    def test_run_log_add_and_summary_tracks_costs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import json
+
+            root = Path(tmp)
+            self.run_cli(root, "init", "--domains", "ai-brain-stack")
+            out = self.run_cli(
+                root,
+                "run-log",
+                "add",
+                "--domain",
+                "ai-brain-stack",
+                "--summary",
+                "Added audit command",
+                "--status",
+                "success",
+                "--cost",
+                "0.25",
+                "--tokens",
+                "1200",
+            )
+            self.assertIn("Logged run", out)
+            text = (root / "loop-run-log.md").read_text(encoding="utf-8")
+            self.assertIn("domain: ai-brain-stack", text)
+            self.assertIn("cost_usd: 0.25", text)
+            summary = self.run_cli(root, "run-log", "summary")
+            self.assertIn("Runs: 1", summary)
+            self.assertIn("Total cost USD: 0.25", summary)
+            data = json.loads(self.run_cli(root, "run-log", "summary", "--json"))
+            self.assertEqual(1, data["runs"])
+            self.assertEqual(0.25, data["total_cost_usd"])
+            self.assertEqual(1200, data["total_tokens"])
+
+    def test_budget_set_and_status_reports_remaining(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import json
+
+            root = Path(tmp)
+            self.run_cli(root, "init")
+            self.run_cli(root, "budget", "set", "--monthly-usd", "10", "--notes", "MVP cap")
+            self.run_cli(root, "run-log", "add", "--domain", "ai-brain-stack", "--summary", "Work", "--cost", "2.50")
+            out = self.run_cli(root, "budget", "status")
+            self.assertIn("Monthly budget USD: 10.00", out)
+            self.assertIn("Spent USD: 2.50", out)
+            self.assertIn("Remaining USD: 7.50", out)
+            data = json.loads(self.run_cli(root, "budget", "status", "--json"))
+            self.assertEqual(10.0, data["monthly_budget_usd"])
+            self.assertEqual(2.5, data["spent_usd"])
+            self.assertEqual(7.5, data["remaining_usd"])
+
     def test_audit_reports_active_project_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:
             import json

@@ -9,6 +9,10 @@ brain projects
 brain audit
 brain status
 brain init-domain --domain new-project --path /home/mike/projects/new-project --active
+brain run-log add --domain ai-brain-stack --summary "Finished audit" --cost 0.25 --tokens 1200
+brain run-log summary
+brain budget set --monthly-usd 20 --notes "MVP cap"
+brain budget status
 brain triage --domain ai-brain-stack
 brain risk-scan --domain robbaan --project /home/mike/projects/robbaan
 brain approval-pack --domain robbaan --project /home/mike/projects/robbaan --task "admin listing row"

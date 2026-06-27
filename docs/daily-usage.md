@@ -110,9 +110,39 @@ brain audit --json
 brain triage --domain ai-brain-stack --json
 brain risk-scan --domain <domain> --project <project-path> --json
 brain approval-pack --domain <domain> --project <project-path> --task "<task>" --json
+brain run-log summary --json
+brain budget status --json
 ```
 
-## 8. Minimal `ทำต่อ` loop
+## 8. Track run cost / budget
+
+After a meaningful loop run, append a simple run-log entry:
+
+```bash
+brain run-log add \
+  --domain ai-brain-stack \
+  --summary "Finished brain audit" \
+  --status success \
+  --cost 0.25 \
+  --tokens 1200
+```
+
+Summarize usage:
+
+```bash
+brain run-log summary
+brain run-log summary --json
+```
+
+Set/check a lightweight budget:
+
+```bash
+brain budget set --monthly-usd 20 --notes "MVP cap"
+brain budget status
+brain budget status --json
+```
+
+## 9. Minimal `ทำต่อ` loop
 
 ```text
 brain projects
@@ -121,6 +151,7 @@ brain projects
 → brain triage --domain <active>
 → do only next safe action
 → verify
+→ brain run-log add --domain <active> --summary "<what happened>"
 → commit tool/brain changes separately
 → report evidence
 ```
