@@ -1,5 +1,7 @@
 # AI Brain Stack
 
+[![tests](https://github.com/chatre7yos/ai-brain-stack/actions/workflows/tests.yml/badge.svg)](https://github.com/chatre7yos/ai-brain-stack/actions/workflows/tests.yml)
+
 A small local CLI for keeping AI-agent work organized and safe.
 
 It gives an agent a simple operating system before it touches code:
