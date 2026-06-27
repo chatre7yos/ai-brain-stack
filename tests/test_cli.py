@@ -275,6 +275,47 @@ Protect Robbaan decisions.
             self.assertEqual("robbaan", data["projects"][0]["domain"])
             self.assertEqual("Draft pilot.", data["projects"][0]["next_safe_action"])
 
+    def test_init_domain_creates_domain_and_active_row(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            project = root / "project"
+            project.mkdir()
+            self.run_cli(root, "init", "--domains", "ai-brain-stack")
+            out = self.run_cli(
+                root,
+                "init-domain",
+                "--domain",
+                "new-domain",
+                "--path",
+                str(project),
+                "--status",
+                "L1-ready",
+                "--next",
+                "Run read-only discovery.",
+                "--active",
+            )
+            self.assertIn("Initialized domain: new-domain", out)
+            domain_dir = root / "domains" / "new-domain"
+            for name in ["LOOP.md", "STATE.md", "backlog.md", "timeline.md", "verify.md"]:
+                self.assertTrue((domain_dir / name).exists())
+            active = (root / "ACTIVE.md").read_text(encoding="utf-8")
+            self.assertIn("`new-domain`", active)
+            self.assertIn(str(project), active)
+            self.assertIn("Run read-only discovery.", active)
+            triage = self.run_cli(root, "triage", "--domain", "new-domain")
+            self.assertIn("new-domain", triage)
+            self.assertIn("No auto-actions taken", triage)
+
+    def test_init_domain_does_not_overwrite_existing_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.run_cli(root, "init", "--domains", "existing")
+            loop = root / "domains" / "existing" / "LOOP.md"
+            loop.write_text("# Keep Me\n", encoding="utf-8")
+            out = self.run_cli(root, "init-domain", "--domain", "existing")
+            self.assertIn("Initialized domain: existing", out)
+            self.assertEqual("# Keep Me\n", loop.read_text(encoding="utf-8"))
+
     def test_audit_reports_active_project_readiness(self):
         with tempfile.TemporaryDirectory() as tmp:
             import json

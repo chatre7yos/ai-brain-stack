@@ -40,6 +40,7 @@ Short form after linking `bin/brain` into PATH:
 brain projects
 brain audit
 brain status
+brain init-domain --domain new-project --path /home/mike/projects/new-project --active
 brain triage --domain robbaan
 brain risk-scan --domain robbaan --project /home/mike/projects/robbaan
 brain approval-pack --domain robbaan --project /home/mike/projects/robbaan --task "admin listing row"

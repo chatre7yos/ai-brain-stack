@@ -99,6 +99,43 @@ def timeline_template(domain: str) -> str:
 """
 
 
+def verify_template(domain: str, project_path: str = "") -> str:
+    scope = project_path or "TBD"
+    return f"""# {domain} Verification Profile
+
+Status: draft until Mike approves implementation scope.
+Last updated: {utc_now()}
+
+## Purpose
+Define safe verification for future work in this domain.
+
+## Scope
+
+```text
+{scope}
+```
+
+## Safe Default Verification
+
+Start report-only. Before any implementation, define exact commands for this domain.
+
+```bash
+brain triage --domain {domain}
+brain risk-scan --domain {domain} --project {scope if project_path else '<project-path>'}
+```
+
+## Required Gates
+- Mike approval before implementation.
+- Separate verifier before commit/push/deploy.
+- No service starts, deploys, tunnels, DB/migrations, secrets, auth, billing, or external writes without explicit approval.
+
+## Hard Stops
+- Stop if scope is ambiguous.
+- Stop if changes touch a product repo that is not the active approved scope.
+- Stop if secrets or production data may be exposed.
+"""
+
+
 def init_brain(root: Path, domains: Iterable[str]) -> None:
     root.mkdir(parents=True, exist_ok=True)
     ensure_file(root / "README.md", "# AI Brain\n\nPortable Markdown-first shared brain for agent loops.\n")
@@ -114,6 +151,62 @@ def init_brain(root: Path, domains: Iterable[str]) -> None:
         ensure_file(d / "STATE.md", state_template(domain))
         ensure_file(d / "backlog.md", backlog_template(domain))
         ensure_file(d / "timeline.md", timeline_template(domain))
+
+
+def active_template() -> str:
+    return """# ACTIVE
+
+Updated: {now}
+
+Default view for “ทำต่อ”. Only these domains are active operating brain by default.
+
+## Rule
+
+- Use this file first when Mike says “ทำต่อ” without naming a project.
+- Read the domain `LOOP.md` and `STATE.md` before acting.
+- Stay L1/report-only unless Mike explicitly requests implementation.
+
+## Active Domains
+
+| Domain | Path / Scope | Status | Default next safe action |
+|---|---|---|---|
+
+## Explicitly Not Active by Default
+
+- Project inventory is reference, not the default working queue.
+""".format(now=utc_now())
+
+
+def active_row(domain: str, project_path: str, status: str, next_action: str) -> str:
+    return f"| `{domain}` | {project_path or 'TBD'} | {status} | {next_action} |"
+
+
+def add_active_domain(root: Path, domain: str, project_path: str, status: str, next_action: str) -> None:
+    active_path = root / "ACTIVE.md"
+    ensure_file(active_path, active_template())
+    text = active_path.read_text(encoding="utf-8")
+    if f"`{domain}`" in text:
+        return
+    row = active_row(domain, project_path, status, next_action)
+    marker = "## Explicitly Not Active by Default"
+    if marker in text:
+        text = text.replace(marker, f"{row}\n\n{marker}", 1)
+    else:
+        text = text.rstrip() + "\n" + row + "\n"
+    active_path.write_text(text, encoding="utf-8")
+
+
+def init_domain(root: Path, domain: str, project_path: str = "", status: str = "L1-ready", next_action: str = "Run L1 triage.", active: bool = False) -> None:
+    init_brain(root, [])
+    domain_dir = root / "domains" / domain
+    domain_dir.mkdir(parents=True, exist_ok=True)
+    ensure_file(domain_dir / "LOOP.md", loop_template(domain))
+    ensure_file(domain_dir / "STATE.md", state_template(domain))
+    ensure_file(domain_dir / "backlog.md", backlog_template(domain))
+    ensure_file(domain_dir / "timeline.md", timeline_template(domain))
+    ensure_file(domain_dir / "verify.md", verify_template(domain, project_path))
+    if active:
+        add_active_domain(root, domain, project_path, status, next_action)
 
 
 def append_worklog(root: Path, domain: str, message: str, agent: str = "manual") -> None:
@@ -684,6 +777,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_init = sub.add_parser("init", help="Create brain skeleton")
     p_init.add_argument("--domains", nargs="*", default=[])
 
+    p_init_domain = sub.add_parser("init-domain", help="Create one domain with LOOP/STATE/backlog/timeline/verify")
+    p_init_domain.add_argument("--domain", required=True)
+    p_init_domain.add_argument("--path", default="", help="Project path or scope label")
+    p_init_domain.add_argument("--status", default="L1-ready")
+    p_init_domain.add_argument("--next", default="Run L1 triage.", help="Default next safe action for ACTIVE.md")
+    p_init_domain.add_argument("--active", action="store_true", help="Add this domain to ACTIVE.md if missing")
+
     p_status = sub.add_parser("status", help="Show domains and artifact counts")
     p_status.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
@@ -747,6 +847,13 @@ def main(argv=None) -> None:
         domains = ", ".join(args.domains) if args.domains else "none"
         print(f"Initialized AI Brain at {root}")
         print(f"Domains: {domains}")
+        return
+
+    if args.command == "init-domain":
+        init_domain(root, args.domain, args.path, args.status, args.next, args.active)
+        print(f"Initialized domain: {args.domain}")
+        print(f"Path / Scope: {args.path or 'TBD'}")
+        print(f"Active: {'yes' if args.active else 'no'}")
         return
 
     if args.command == "log":
