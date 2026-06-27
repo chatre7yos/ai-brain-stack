@@ -6,6 +6,7 @@ Use this file to decide where to read or write next. It keeps the repo from turn
 
 | Need | File |
 |---|---|
+| Set up in 5 minutes | `docs/QUICKSTART.md` |
 | Understand what this repo is | `README.md` |
 | Understand the shared vocabulary | `CONTEXT.md` |
 | Know where things live | `docs/MAP.md` |
@@ -15,6 +16,7 @@ Use this file to decide where to read or write next. It keeps the repo from turn
 | Need | File / command |
 |---|---|
 | Start or continue the active project | `brain next` / `brain ทำต่อ` |
+| First-time setup | `docs/QUICKSTART.md` |
 | Create a first brain/project link | `brain setup --domain <name> --path <path>` |
 | Daily workflow guide | `docs/daily-usage.md` |
 | Full command boundary guide | `docs/commands.md` |

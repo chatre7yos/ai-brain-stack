@@ -15,7 +15,8 @@ What needs approval before implementation?
 
 The main command is `brain`.
 
-Need navigation? Start with `docs/MAP.md`.
+New here? Start with `docs/QUICKSTART.md`.
+Need navigation? Use `docs/MAP.md`.
 
 ---
 
@@ -405,6 +406,7 @@ It is a small local control layer for safer agent loops.
 bin/brain             CLI wrapper
 brain/cli.py          Main Python CLI
 CONTEXT.md            Shared language for agents and contributors
+docs/QUICKSTART.md    5-minute setup path for new users
 docs/MAP.md           Repo navigation map
 docs/usage.md         CLI examples
 docs/commands.md      Human vs agent command boundaries
