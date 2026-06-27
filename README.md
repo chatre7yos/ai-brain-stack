@@ -59,7 +59,10 @@ python3 -m brain.cli --root ./my-brain status
 python3 -m brain.cli --root ./my-brain triage --domain robbaan
 ```
 
-See `docs/usage.md` for shortcut installation and examples.
+See:
+
+- `docs/usage.md` for shortcut installation and examples.
+- `docs/daily-usage.md` for the daily `ทำต่อ` workflow.
 
 ## For other agents
 

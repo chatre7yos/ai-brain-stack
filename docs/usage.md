@@ -36,3 +36,5 @@ brain --root /home/mike/ai-brain projects
 ## Safety
 
 `projects`, `status`, `triage`, and `risk-scan` are read/report oriented. `approval-pack --output artifacts` writes only under the AI Brain artifacts folder, not the target project.
+
+For the day-to-day `ทำต่อ` workflow, see `docs/daily-usage.md`.
