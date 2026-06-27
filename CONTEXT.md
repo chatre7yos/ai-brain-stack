@@ -51,6 +51,8 @@ Use these first:
 
 ```bash
 brain setup --domain <name> --path <path>
+# If the project directory does not exist yet:
+brain setup --domain <name> --path <path> --create-project-dir
 brain next
 brain ทำต่อ
 brain codex

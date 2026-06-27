@@ -6,6 +6,8 @@ Install or symlink `bin/brain` into your PATH, then use:
 
 ```bash
 brain setup --domain ai-brain-stack --path /home/mike/projects/ai-brain-stack
+# If the project directory does not exist yet:
+brain setup --domain new-project --path /home/mike/projects/new-project --create-project-dir
 brain projects
 brain next
 brain ทำต่อ

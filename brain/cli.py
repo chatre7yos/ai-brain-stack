@@ -1022,6 +1022,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_setup = sub.add_parser("setup", help="Bootstrap a local brain root and first active domain")
     p_setup.add_argument("--domain", required=True, help="First domain/project name")
     p_setup.add_argument("--path", required=True, help="Project path for this domain")
+    p_setup.add_argument("--create-project-dir", action="store_true", help="Create --path if it does not exist")
     p_setup.add_argument("--status", default="L1-ready")
     p_setup.add_argument("--next", default="Run brain next.", help="Default next safe action for ACTIVE.md")
 
@@ -1136,7 +1137,15 @@ def main(argv=None) -> None:
         return
 
     if args.command == "setup":
-        project_path = str(Path(args.path).expanduser().resolve())
+        project = Path(args.path).expanduser().resolve()
+        if not project.exists():
+            if args.create_project_dir:
+                project.mkdir(parents=True, exist_ok=True)
+            else:
+                parser.error("project path does not exist; create it first or pass --create-project-dir")
+        if not project.is_dir():
+            parser.error("project path must be a directory")
+        project_path = str(project)
         init_domain(root, args.domain, project_path, args.status, args.next, active=True)
         print(f"AI Brain setup complete: {root}")
         print(f"Domain: {args.domain}")

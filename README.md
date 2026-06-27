@@ -58,7 +58,7 @@ That private brain folder can contain sensitive project notes, so it should usua
 
 | Command | Purpose |
 |---|---|
-| `brain setup --domain <name> --path <path>` | Bootstrap a local brain root and first active project |
+| `brain setup --domain <name> --path <path>` | Bootstrap a local brain root and first active project; use `--create-project-dir` if the path should be created |
 | `brain projects` | Show active projects from `ACTIVE.md` |
 | `brain next` | Run one safe L1 loop for the first active project |
 | `brain ทำต่อ` | Thai alias for `brain next` |
@@ -154,6 +154,15 @@ Create a private brain folder and first active project in one command:
 brain --root ~/ai-brain setup \
   --domain my-project \
   --path /path/to/my-project
+```
+
+`--path` must be an existing project directory. To create it during setup:
+
+```bash
+brain --root ~/ai-brain setup \
+  --domain my-project \
+  --path /path/to/my-project \
+  --create-project-dir
 ```
 
 Then continue safely:

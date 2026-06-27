@@ -3,7 +3,7 @@ import os
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 from brain.cli import main
@@ -49,6 +49,26 @@ class BrainCliTests(unittest.TestCase):
             loop_path.write_text("# Custom Loop\n", encoding="utf-8")
             self.run_cli(root, "setup", "--domain", "demo", "--path", str(project))
             self.assertEqual("# Custom Loop\n", loop_path.read_text(encoding="utf-8"))
+
+    def test_setup_requires_existing_project_path_unless_create_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "brain"
+            project = Path(tmp) / "new-project"
+
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with self.assertRaises(SystemExit) as ctx:
+                with redirect_stdout(stdout), redirect_stderr(stderr):
+                    main(["--root", str(root), "setup", "--domain", "demo", "--path", str(project)])
+            self.assertNotEqual(0, ctx.exception.code)
+            self.assertIn("project path does not exist", stderr.getvalue())
+            self.assertFalse(project.exists())
+
+            out = self.run_cli(root, "setup", "--domain", "demo", "--path", str(project), "--create-project-dir")
+            self.assertIn("AI Brain setup complete", out)
+            self.assertTrue(project.is_dir())
+            next_out = self.run_cli(root, "next")
+            self.assertIn("Status: ok", next_out)
 
     def test_log_appends_worklog_entry(self):
         with tempfile.TemporaryDirectory() as tmp:
