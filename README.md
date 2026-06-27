@@ -61,6 +61,8 @@ That private brain folder can contain sensitive project notes, so it should usua
 | `brain projects` | Show active projects from `ACTIVE.md` |
 | `brain next` | Run one safe L1 loop for the first active project |
 | `brain ทำต่อ` | Thai alias for `brain next` |
+| `brain codex` | Print a ready-to-run Codex L1 command |
+| `brain claude` | Print a ready-to-run Claude Code L1 command |
 | `brain audit` | Check whether the brain folder is healthy |
 | `brain triage --domain <name>` | Read a project/domain and print a safe L1 report |
 | `brain risk-scan --domain <name> --project <path>` | Check current git diff against denied actions |
@@ -79,16 +81,18 @@ Agent examples:
 Quick Codex example:
 
 ```bash
-cd /path/to/my-project
-codex exec "Use AI Brain Stack first. Run: brain --root /path/to/ai-brain next. Stay L1 report-only. Do not edit files, commit, push, deploy, start services, or touch secrets. Return focus, blockers, denied actions, risk level, next safe action, and command evidence."
+brain codex
 ```
+
+Copy and run the printed command.
 
 Quick Claude Code example:
 
 ```bash
-cd /path/to/my-project
-claude -p "Use AI Brain Stack as the operating layer. Run: brain --root /path/to/ai-brain next. Stay L1 report-only. Do not edit files, commit, push, deploy, start services, or touch secrets. Return focus, blockers, denied actions, risk level, next safe action, and command evidence."
+brain claude
 ```
+
+Copy and run the printed command.
 
 ---
 

@@ -50,6 +50,16 @@ Rules:
 
 ## Codex example
 
+Simplest form:
+
+```bash
+brain codex
+```
+
+Copy and run the printed `codex exec ...` command from the project repo.
+
+Manual form:
+
 Good for one-shot terminal/repo checks.
 
 From the project repo:
@@ -87,6 +97,16 @@ If your Codex CLI uses a different non-interactive flag, keep the prompt but ada
 ---
 
 ## Claude Code example
+
+Simplest form:
+
+```bash
+brain claude
+```
+
+Copy and run the printed `claude -p ...` command from the project repo.
+
+Manual form:
 
 Good for repo-aware analysis and longer implementation sessions.
 

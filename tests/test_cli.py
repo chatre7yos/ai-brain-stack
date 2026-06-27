@@ -466,6 +466,27 @@ Protect Robbaan decisions.
             self.assertEqual("demo", data["domain"])
             self.assertEqual(str(project.resolve()), data["project"])
 
+    def test_agent_command_shortcuts_print_ready_to_run_codex_and_claude(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "brain"
+            project = Path(tmp) / "project"
+            project.mkdir()
+            self.run_cli(root, "init-domain", "--domain", "demo", "--path", str(project), "--active")
+
+            codex = self.run_cli(root, "codex")
+            self.assertIn("codex exec", codex)
+            self.assertIn("brain --root", codex)
+            self.assertIn(" next", codex)
+            self.assertIn("L1 report-only", codex)
+            self.assertIn("Do not edit files", codex)
+
+            claude = self.run_cli(root, "claude")
+            self.assertIn("claude -p", claude)
+            self.assertIn("brain --root", claude)
+            self.assertIn(" next", claude)
+            self.assertIn("L1 report-only", claude)
+            self.assertIn("Do not edit files", claude)
+
     def test_thai_continue_alias_uses_first_active_project(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "brain"

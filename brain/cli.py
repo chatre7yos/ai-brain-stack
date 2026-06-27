@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
@@ -580,6 +581,25 @@ def print_loop_run_once(data: dict) -> None:
         print(f"\nRun log: {data['run_log']}")
 
 
+def agent_l1_prompt(root: Path) -> str:
+    return (
+        "Use AI Brain Stack as the operating layer. "
+        f"Run: brain --root {shlex.quote(str(root))} next. "
+        "Stay L1 report-only. Do not edit files, commit, push, deploy, start services, or touch secrets. "
+        "Return focus, blockers, denied actions, risk level, next safe action, and command evidence."
+    )
+
+
+def print_agent_command(root: Path, agent: str) -> None:
+    prompt = agent_l1_prompt(root)
+    if agent == "codex":
+        print(f"codex exec {shlex.quote(prompt)}")
+    elif agent == "claude":
+        print(f"claude -p {shlex.quote(prompt)}")
+    else:
+        raise SystemExit(f"Unsupported agent: {agent}")
+
+
 def read_title(path: Path) -> str:
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("# "):
@@ -992,6 +1012,9 @@ def build_parser() -> argparse.ArgumentParser:
         p_shortcut.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
         p_shortcut.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
+    sub.add_parser("codex", help="Print a ready-to-run Codex L1 command")
+    sub.add_parser("claude", help="Print a ready-to-run Claude Code L1 command")
+
     p_run_log = sub.add_parser("run-log", help="Manage loop run log")
     run_log_sub = p_run_log.add_subparsers(dest="run_log_command", required=True)
     p_run_log_add = run_log_sub.add_parser("add", help="Append a loop run entry")
@@ -1130,6 +1153,10 @@ def main(argv=None) -> None:
             print_json(data)
             return
         print_loop_run_once(data)
+        return
+
+    if args.command in {"codex", "claude"}:
+        print_agent_command(root, args.command)
         return
 
     if args.command == "run-log":

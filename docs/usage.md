@@ -8,6 +8,8 @@ Install or symlink `bin/brain` into your PATH, then use:
 brain projects
 brain next
 brain ทำต่อ
+brain codex
+brain claude
 brain audit
 brain status
 brain loop run --domain ai-brain-stack --project /home/mike/projects/ai-brain-stack --once
