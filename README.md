@@ -76,6 +76,20 @@ Agent examples:
 
 - `docs/agent-examples.md` shows how to use AI Brain Stack with Codex, Claude Code, and agy.
 
+Quick Codex example:
+
+```bash
+cd /path/to/my-project
+codex exec "Use AI Brain Stack first. Run: brain --root /path/to/ai-brain next. Stay L1 report-only. Do not edit files, commit, push, deploy, start services, or touch secrets. Return focus, blockers, denied actions, risk level, next safe action, and command evidence."
+```
+
+Quick Claude Code example:
+
+```bash
+cd /path/to/my-project
+claude -p "Use AI Brain Stack as the operating layer. Run: brain --root /path/to/ai-brain next. Stay L1 report-only. Do not edit files, commit, push, deploy, start services, or touch secrets. Return focus, blockers, denied actions, risk level, next safe action, and command evidence."
+```
+
 ---
 
 ## Install / local setup
