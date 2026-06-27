@@ -50,6 +50,7 @@ Use these terms consistently. If an agent is unsure, it should ask or run a read
 Use these first:
 
 ```bash
+brain setup --domain <name> --path <path>
 brain next
 brain ทำต่อ
 brain codex

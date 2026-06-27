@@ -16,6 +16,7 @@ These are the commands a person should normally use day to day.
 
 | Command | Purpose |
 |---|---|
+| `brain setup --domain <name> --path <path>` | Bootstrap a local brain root and first active project |
 | `brain next` | Run one safe L1 loop for the first active project |
 | `brain ทำต่อ` | Thai alias for `brain next` |
 | `brain codex` | Print a ready-to-run Codex L1 command |

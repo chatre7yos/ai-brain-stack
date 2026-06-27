@@ -137,6 +137,44 @@ brain risk-scan --domain {domain} --project {scope if project_path else '<projec
 """
 
 
+def out_of_scope_template(domain: str) -> str:
+    return f"""# {domain} Out of Scope
+
+Use this file to make scope boundaries explicit before an agent starts work.
+
+## Always denied unless explicitly approved
+
+- Do not edit unrelated projects or domains.
+- Do not commit, push, deploy, publish, release, or upload.
+- Do not start services, public tunnels, daemons, queues, or long-running processes.
+- Do not touch secrets, tokens, credentials, auth, billing, production data, or migrations.
+- Do not overwrite user files or generated artifacts without an explicit approval gate.
+- Do not convert L1 report-only work into L2 implementation without approval.
+
+## Project-specific denied actions
+
+- None yet. Add concrete domain-specific hard stops here.
+
+## Allowed in L1
+
+- Read Markdown brain files.
+- Run `brain projects`, `brain audit`, `brain triage`, `brain risk-scan`, or `brain next`.
+- Read git status/diff.
+- Report blockers, risk, and next safe action.
+
+## Requires L2 approval
+
+- Editing project files.
+- Running tests that start services or touch external systems.
+- Creating commits or pushing branches.
+- Writing approval-pack artifacts.
+
+## Stop condition
+
+If a requested action conflicts with this file, stop and ask for approval before continuing.
+"""
+
+
 def init_brain(root: Path, domains: Iterable[str]) -> None:
     root.mkdir(parents=True, exist_ok=True)
     ensure_file(root / "README.md", "# AI Brain\n\nPortable Markdown-first shared brain for agent loops.\n")
@@ -206,6 +244,7 @@ def init_domain(root: Path, domain: str, project_path: str = "", status: str = "
     ensure_file(domain_dir / "backlog.md", backlog_template(domain))
     ensure_file(domain_dir / "timeline.md", timeline_template(domain))
     ensure_file(domain_dir / "verify.md", verify_template(domain, project_path))
+    ensure_file(domain_dir / "out-of-scope.md", out_of_scope_template(domain))
     if active:
         add_active_domain(root, domain, project_path, status, next_action)
 
@@ -980,6 +1019,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_init = sub.add_parser("init", help="Create brain skeleton")
     p_init.add_argument("--domains", nargs="*", default=[])
 
+    p_setup = sub.add_parser("setup", help="Bootstrap a local brain root and first active domain")
+    p_setup.add_argument("--domain", required=True, help="First domain/project name")
+    p_setup.add_argument("--path", required=True, help="Project path for this domain")
+    p_setup.add_argument("--status", default="L1-ready")
+    p_setup.add_argument("--next", default="Run brain next.", help="Default next safe action for ACTIVE.md")
+
     p_init_domain = sub.add_parser("init-domain", help="Create one domain with LOOP/STATE/backlog/timeline/verify")
     p_init_domain.add_argument("--domain", required=True)
     p_init_domain.add_argument("--path", default="", help="Project path or scope label")
@@ -1088,6 +1133,19 @@ def main(argv=None) -> None:
         domains = ", ".join(args.domains) if args.domains else "none"
         print(f"Initialized AI Brain at {root}")
         print(f"Domains: {domains}")
+        return
+
+    if args.command == "setup":
+        project_path = str(Path(args.path).expanduser().resolve())
+        init_domain(root, args.domain, project_path, args.status, args.next, active=True)
+        print(f"AI Brain setup complete: {root}")
+        print(f"Domain: {args.domain}")
+        print(f"Project: {project_path}")
+        print("Created/verified safe local files only; existing files were not overwritten.")
+        print("Next commands:")
+        print(f"  brain --root {shlex.quote(str(root))} next")
+        print(f"  brain --root {shlex.quote(str(root))} codex")
+        print(f"  brain --root {shlex.quote(str(root))} claude")
         return
 
     if args.command == "init-domain":

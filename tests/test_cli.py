@@ -29,6 +29,27 @@ class BrainCliTests(unittest.TestCase):
                 for name in ["LOOP.md", "STATE.md", "backlog.md", "timeline.md"]:
                     self.assertTrue((root / "domains" / domain / name).exists())
 
+    def test_setup_bootstraps_active_domain_without_overwriting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "brain"
+            project = Path(tmp) / "project"
+            project.mkdir()
+
+            out = self.run_cli(root, "setup", "--domain", "demo", "--path", str(project))
+            self.assertIn("AI Brain setup complete", out)
+            self.assertIn("brain next", out)
+            self.assertTrue((root / "ACTIVE.md").exists())
+            active = (root / "ACTIVE.md").read_text(encoding="utf-8")
+            self.assertIn("`demo`", active)
+            self.assertIn(str(project), active)
+            for name in ["LOOP.md", "STATE.md", "backlog.md", "timeline.md", "verify.md", "out-of-scope.md"]:
+                self.assertTrue((root / "domains" / "demo" / name).exists())
+
+            loop_path = root / "domains" / "demo" / "LOOP.md"
+            loop_path.write_text("# Custom Loop\n", encoding="utf-8")
+            self.run_cli(root, "setup", "--domain", "demo", "--path", str(project))
+            self.assertEqual("# Custom Loop\n", loop_path.read_text(encoding="utf-8"))
+
     def test_log_appends_worklog_entry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
