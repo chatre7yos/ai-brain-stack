@@ -400,6 +400,53 @@ Protect Robbaan decisions.
             self.assertEqual(1, data["summary"]["missing_domain_files"])
             self.assertTrue(any(item["domain"] == "missing-state" for item in data["findings"]))
 
+    def test_loop_run_once_runs_l1_checks_and_records_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import json
+
+            root = Path(tmp) / "brain"
+            project = Path(tmp) / "project"
+            project.mkdir()
+            self.run_cli(root, "init-domain", "--domain", "demo", "--path", str(project), "--active")
+
+            before_project = sorted(str(p.relative_to(project)) for p in project.rglob("*"))
+            out = self.run_cli(root, "loop", "run", "--domain", "demo", "--project", str(project), "--once")
+            after_project = sorted(str(p.relative_to(project)) for p in project.rglob("*"))
+
+            self.assertEqual(before_project, after_project)
+            self.assertIn("# Loop Run — demo", out)
+            self.assertIn("Mode: once", out)
+            self.assertIn("Audit: ok", out)
+            self.assertIn("Risk Level: none", out)
+            self.assertIn("Next: human/agent may choose the next safe action from triage", out)
+            run_log = (root / "loop-run-log.md").read_text(encoding="utf-8")
+            self.assertIn("loop run once", run_log)
+            self.assertIn("domain: demo", run_log)
+
+            data = json.loads(self.run_cli(root, "loop", "run", "--domain", "demo", "--project", str(project), "--once", "--json"))
+            self.assertEqual("demo", data["domain"])
+            self.assertEqual("once", data["mode"])
+            self.assertEqual("none", data["risk"]["risk_level"])
+            self.assertEqual("ok", data["audit_status"])
+
+    def test_loop_run_once_blocks_on_high_risk_diff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "brain"
+            project = Path(tmp) / "project"
+            project.mkdir()
+            self.run_cli(root, "init-domain", "--domain", "demo", "--path", str(project), "--active")
+            (root / "domains" / "demo" / "LOOP.md").write_text("""# Demo Loop
+
+## Denied Actions
+- No database schema/data changes.
+""", encoding="utf-8")
+
+            out = self.run_cli(root, "loop", "run", "--domain", "demo", "--project", str(project), "--once", "--diff", "+ db/schema.sql")
+            self.assertIn("Risk Level: high", out)
+            self.assertIn("Next: stop and request approval", out)
+            run_log = (root / "loop-run-log.md").read_text(encoding="utf-8")
+            self.assertIn("status: blocked", run_log)
+
     def test_bin_brain_uses_env_default_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

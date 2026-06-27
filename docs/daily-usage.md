@@ -54,6 +54,16 @@ brain risk-scan --domain <domain> --project <project-path>
 
 If the scan reports high risk, stop and ask Mike.
 
+## 3b. One-command L1 loop
+
+When the domain and project path are clear, run one full safe L1 loop step:
+
+```bash
+brain loop run --domain <domain> --project <project-path> --once
+```
+
+This performs audit, triage, risk scan, writes a run-log entry, and stops. It does not edit target project files.
+
 ## 4. Before implementation
 
 Create an approval package first:
@@ -109,6 +119,7 @@ brain projects --json
 brain audit --json
 brain triage --domain ai-brain-stack --json
 brain risk-scan --domain <domain> --project <project-path> --json
+brain loop run --domain <domain> --project <project-path> --once --json
 brain approval-pack --domain <domain> --project <project-path> --task "<task>" --json
 brain run-log summary --json
 brain budget status --json
@@ -154,4 +165,12 @@ brain projects
 → brain run-log add --domain <active> --summary "<what happened>"
 → commit tool/brain changes separately
 → report evidence
+```
+
+Equivalent one-command L1 version:
+
+```text
+brain loop run --domain <active> --project <project-path> --once
+→ inspect status/risk/next
+→ stop unless implementation is explicitly approved
 ```

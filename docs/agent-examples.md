@@ -30,6 +30,10 @@ brain --root /path/to/ai-brain audit
 brain --root /path/to/ai-brain triage --domain my-project
 brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/my-project
 
+Optional one-command L1 loop:
+
+brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
+
 Rules:
 - L1 only unless explicitly approved.
 - Do not edit code yet.
@@ -61,6 +65,10 @@ brain --root /path/to/ai-brain audit
 brain --root /path/to/ai-brain triage --domain my-project
 brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/my-project
 
+Optional one-command L1 loop:
+
+brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
+
 Do L1 report-only. Do not edit files. Do not commit/push/deploy.
 Summarize blockers, denied actions, next safe action, and exact command evidence.
 "
@@ -90,6 +98,10 @@ brain --root /path/to/ai-brain projects
 brain --root /path/to/ai-brain audit
 brain --root /path/to/ai-brain triage --domain my-project
 brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/my-project
+
+Optional one-command L1 loop:
+
+brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
 
 Stay L1 report-only. Do not edit files. Do not commit, push, deploy, start services, or touch secrets.
 Return a concise report with: current focus, blockers, denied actions, risk level, next safe action.
@@ -128,6 +140,10 @@ brain --root /path/to/ai-brain audit
 brain --root /path/to/ai-brain triage --domain my-project
 brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/my-project
 
+Optional one-command L1 loop:
+
+brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once
+
 Do not edit files. Do not commit/push/deploy. Do not touch secrets.
 Return a compact report: focus, blockers, denied actions, risk level, next safe action.
 "
@@ -142,6 +158,7 @@ brain --root /path/to/ai-brain projects --json > /tmp/brain-projects.json
 brain --root /path/to/ai-brain audit --json > /tmp/brain-audit.json
 brain --root /path/to/ai-brain triage --domain my-project --json > /tmp/brain-triage.json
 brain --root /path/to/ai-brain risk-scan --domain my-project --project /path/to/my-project --json > /tmp/brain-risk.json
+brain --root /path/to/ai-brain loop run --domain my-project --project /path/to/my-project --once --json > /tmp/brain-loop.json
 ```
 
 Then ask agy to summarize only those files.

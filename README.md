@@ -62,6 +62,7 @@ That private brain folder can contain sensitive project notes, so it should usua
 | `brain audit` | Check whether the brain folder is healthy |
 | `brain triage --domain <name>` | Read a project/domain and print a safe L1 report |
 | `brain risk-scan --domain <name> --project <path>` | Check current git diff against denied actions |
+| `brain loop run --domain <name> --project <path> --once` | Run one safe L1 loop step and record it |
 | `brain approval-pack ...` | Draft an approval package before L2 implementation |
 | `brain init-domain ...` | Create a new project/domain skeleton |
 | `brain run-log ...` | Track loop runs, cost, and tokens |
@@ -155,6 +156,17 @@ brain --root ~/ai-brain triage --domain my-project
 brain --root ~/ai-brain risk-scan --domain my-project --project /path/to/my-project
 ```
 
+Or run one complete safe L1 loop step:
+
+```bash
+brain --root ~/ai-brain loop run \
+  --domain my-project \
+  --project /path/to/my-project \
+  --once
+```
+
+`loop run --once` performs audit + triage + risk scan, writes a run-log entry, and stops. It does not edit project files.
+
 Record the run:
 
 ```bash
@@ -233,6 +245,12 @@ brain triage --domain <active-project>
 brain risk-scan --domain <active-project> --project <project-path>
 ```
 
+Shortcut form:
+
+```bash
+brain loop run --domain <active-project> --project <project-path> --once
+```
+
 Only after that should the agent propose or execute the next safe action.
 
 If implementation is needed, create an approval package first:
@@ -255,6 +273,7 @@ brain projects --json
 brain audit --json
 brain triage --domain my-project --json
 brain risk-scan --domain my-project --project /path/to/my-project --json
+brain loop run --domain my-project --project /path/to/my-project --once --json
 brain approval-pack --domain my-project --project /path/to/my-project --task "small task" --json
 brain run-log summary --json
 brain budget status --json

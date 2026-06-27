@@ -493,6 +493,73 @@ def print_budget_status(root: Path) -> None:
         print(f"Notes: {data['notes']}")
 
 
+def audit_status(data: dict) -> str:
+    summary = data["summary"]
+    if summary["active_projects"] <= 0:
+        return "blocked"
+    if summary["missing_domain_files"] or summary["missing_verify_profiles"] or summary["missing_project_paths"]:
+        return "warn"
+    return "ok"
+
+
+def loop_run_once_data(root: Path, domain: str, project: Path, diff_text: str = "", write_log: bool = True) -> dict:
+    audit = audit_data(root)
+    triage = domain_triage_data(root, domain)
+    risk = risk_scan_data(root, domain, project, diff_text)
+    status = "blocked" if risk["risk_level"] == "high" else audit_status(audit)
+    if risk["risk_level"] == "high":
+        next_action = "stop and request approval"
+    elif status == "warn":
+        next_action = "fix audit warnings before implementation"
+    else:
+        next_action = "human/agent may choose the next safe action from triage"
+    summary = f"loop run once: audit={audit_status(audit)} risk={risk['risk_level']} next={next_action}"
+    run_log_path = ""
+    if write_log:
+        run_log_path = str(write_run_log(root, domain, summary, status=status))
+    return {
+        "root": str(root),
+        "domain": domain,
+        "project": str(project),
+        "mode": "once",
+        "audit_status": audit_status(audit),
+        "status": status,
+        "risk": risk,
+        "triage": {
+            "current_focus": triage.get("current_focus", []),
+            "blocked_needs_mike": triage.get("blocked_needs_mike", []),
+            "next_safe_actions": triage.get("next_safe_actions", []),
+            "denied_actions": triage.get("denied_actions", []),
+        },
+        "next": next_action,
+        "run_log": run_log_path,
+        "safety": [
+            "L1 loop run only.",
+            "No project files modified.",
+            "No commit, push, deploy, service start, tunnel, secrets, DB, or external write.",
+        ],
+    }
+
+
+def print_loop_run_once(data: dict) -> None:
+    print(f"# Loop Run — {data['domain']}")
+    print(f"Root: {data['root']}")
+    print(f"Project: {data['project']}")
+    print("Mode: once")
+    print(f"Status: {data['status']}")
+    print(f"Audit: {data['audit_status']}")
+    print(f"Risk Level: {data['risk']['risk_level']}")
+    print(f"Next: {data['next']}")
+    print("\n## Blockers / Needs Mike")
+    print_lines(data["triage"]["blocked_needs_mike"], limit=10)
+    print("\n## Next Safe Actions")
+    print_lines(data["triage"]["next_safe_actions"], limit=10)
+    print("\n## Safety")
+    print_lines(data["safety"], limit=10)
+    if data["run_log"]:
+        print(f"\nRun log: {data['run_log']}")
+
+
 def read_title(path: Path) -> str:
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
         if line.startswith("# "):
@@ -889,6 +956,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_audit = sub.add_parser("audit", help="Audit active brain readiness")
     p_audit.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
+    p_loop = sub.add_parser("loop", help="Run safe loop orchestration")
+    loop_sub = p_loop.add_subparsers(dest="loop_command", required=True)
+    p_loop_run = loop_sub.add_parser("run", help="Run one safe L1 loop step")
+    p_loop_run.add_argument("--domain", required=True)
+    p_loop_run.add_argument("--project", required=True)
+    p_loop_run.add_argument("--once", action="store_true", help="Run one L1 loop step")
+    p_loop_run.add_argument("--diff", default="", help="Optional diff text. If omitted, reads git diff from project.")
+    p_loop_run.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
     p_run_log = sub.add_parser("run-log", help="Manage loop run log")
     run_log_sub = p_run_log.add_subparsers(dest="run_log_command", required=True)
     p_run_log_add = run_log_sub.add_parser("add", help="Append a loop run entry")
@@ -1009,6 +1085,15 @@ def main(argv=None) -> None:
             print_json(audit_data(root))
             return
         print_audit(root)
+        return
+
+    if args.command == "loop" and args.loop_command == "run":
+        project = Path(args.project).expanduser().resolve()
+        data = loop_run_once_data(root, args.domain, project, args.diff, write_log=True)
+        if args.json:
+            print_json(data)
+            return
+        print_loop_run_once(data)
         return
 
     if args.command == "run-log":
