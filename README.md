@@ -378,9 +378,12 @@ It is a small local control layer for safer agent loops.
 ```text
 bin/brain             CLI wrapper
 brain/cli.py          Main Python CLI
+CONTEXT.md            Shared language for agents and contributors
 docs/usage.md         CLI examples
+docs/commands.md      Human vs agent command boundaries
 docs/daily-usage.md   Daily workflow guide
 docs/agent-examples.md Agent handoff examples for Codex, Claude Code, and agy
+templates/out-of-scope.md Scope guard template
 templates/            Starter Markdown templates
 tests/test_cli.py     Test suite
 ```
