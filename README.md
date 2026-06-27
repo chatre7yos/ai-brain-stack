@@ -409,6 +409,7 @@ It is a small local control layer for safer agent loops.
 bin/brain             CLI wrapper
 brain/cli.py          Main Python CLI
 AGENTS.md             Guardrails for agents and contributors
+CHANGELOG.md          Release history
 CONTEXT.md            Shared language for agents and contributors
 docs/QUICKSTART.md    5-minute setup path for new users
 docs/MAP.md           Repo navigation map
