@@ -258,6 +258,47 @@ brain budget status --json
 
 ---
 
+## Compatibility
+
+Tested in this repo:
+
+| Area | Status |
+|---|---|
+| Python | Requires Python 3.11+ (`pyproject.toml`) |
+| Current test runtime | Python 3.11.15 |
+| OS / shell | Linux/WSL with Bash |
+| Git projects | Works with local Git working trees for `risk-scan` |
+| Brain storage | Plain Markdown folders and files |
+| Automation | JSON output for scripts, cron, n8n, CI, or other agents |
+
+Should also work with minimal or no changes:
+
+- macOS with Python 3.11+, Bash, and Git
+- Linux servers or dev containers with Python 3.11+
+- WSL on Windows
+- any AI coding agent that can read files and run shell commands
+
+Not packaged/tested yet:
+
+- native Windows `cmd.exe` / PowerShell wrapper
+- pip package release
+- npm package release
+- Docker image
+- hosted web UI
+- GitHub Actions templates
+
+Compatible agent workflows:
+
+- Hermes Agent
+- Claude Code
+- Codex-style terminal agents
+- Cursor/IDE agents that can read Markdown project state
+- n8n/cron/CI flows via `--json`
+
+Important: the public repo is only the tool. Your private brain folder, project notes, run logs, and domain state should normally stay outside the repo.
+
+---
+
 ## What this is not
 
 AI Brain Stack is not:
