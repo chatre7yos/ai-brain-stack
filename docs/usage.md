@@ -6,6 +6,7 @@ Install or symlink `bin/brain` into your PATH, then use:
 
 ```bash
 brain projects
+brain audit
 brain status
 brain triage --domain ai-brain-stack
 brain risk-scan --domain robbaan --project /home/mike/projects/robbaan

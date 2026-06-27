@@ -275,6 +275,40 @@ Protect Robbaan decisions.
             self.assertEqual("robbaan", data["projects"][0]["domain"])
             self.assertEqual("Draft pilot.", data["projects"][0]["next_safe_action"])
 
+    def test_audit_reports_active_project_readiness(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import json
+
+            root = Path(tmp)
+            self.run_cli(root, "init", "--domains", "ai-brain-stack", "missing-state")
+            (root / "ACTIVE.md").write_text("""# ACTIVE
+
+## Active Domains
+
+| Domain | Path / Scope | Status | Default next safe action |
+|---|---|---|---|
+| `ai-brain-stack` | `/home/mike/projects/ai-brain-stack` | Active focus | Finish CLI. |
+| `missing-state` | `/tmp/does-not-exist-for-brain-test` | L1-ready | Fix files. |
+""", encoding="utf-8")
+            (root / "domains" / "ai-brain-stack" / "verify.md").write_text("# Verify\n", encoding="utf-8")
+            (root / "domains" / "missing-state" / "STATE.md").unlink()
+
+            out = self.run_cli(root, "audit")
+            self.assertIn("# Brain Audit", out)
+            self.assertIn("Active projects: 2", out)
+            self.assertIn("Active focus: ai-brain-stack", out)
+            self.assertIn("Missing domain files: 1", out)
+            self.assertIn("WARN: missing-state missing STATE.md", out)
+            self.assertIn("WARN: missing-state project path missing", out)
+            self.assertIn("WARN: missing-state missing verify.md", out)
+            self.assertNotIn("Robbaan", out)
+
+            data = json.loads(self.run_cli(root, "audit", "--json"))
+            self.assertEqual(2, data["summary"]["active_projects"])
+            self.assertEqual("ai-brain-stack", data["active_focus"])
+            self.assertEqual(1, data["summary"]["missing_domain_files"])
+            self.assertTrue(any(item["domain"] == "missing-state" for item in data["findings"]))
+
     def test_bin_brain_uses_env_default_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

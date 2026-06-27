@@ -231,6 +231,75 @@ def print_projects(root: Path) -> None:
         print(f"- {item['domain']} — {item['path_scope']} — {item['status']} — {item['next_safe_action']}")
 
 
+def is_filesystem_path(value: str) -> bool:
+    return value.startswith("/") or value.startswith("~/")
+
+
+def audit_data(root: Path) -> dict:
+    projects_data = active_projects_data(root)
+    findings: list[dict] = []
+    active_exists = (root / "ACTIVE.md").exists()
+    if active_exists:
+        findings.append({"level": "OK", "domain": "_brain", "message": "ACTIVE.md exists"})
+    else:
+        findings.append({"level": "ERROR", "domain": "_brain", "message": "ACTIVE.md missing"})
+
+    missing_domain_files = 0
+    missing_verify_profiles = 0
+    missing_project_paths = 0
+    for project in projects_data["projects"]:
+        domain = project["domain"]
+        domain_dir = root / "domains" / domain
+        for filename in DOMAIN_FILES:
+            if not (domain_dir / filename).exists():
+                missing_domain_files += 1
+                findings.append({"level": "WARN", "domain": domain, "message": f"{domain} missing {filename}"})
+        if not (domain_dir / "verify.md").exists():
+            missing_verify_profiles += 1
+            findings.append({"level": "WARN", "domain": domain, "message": f"{domain} missing verify.md"})
+        path_scope = project["path_scope"]
+        if is_filesystem_path(path_scope):
+            first_path = path_scope.split(" + ", 1)[0]
+            project_path = Path(first_path).expanduser()
+            if not project_path.exists():
+                missing_project_paths += 1
+                findings.append({"level": "WARN", "domain": domain, "message": f"{domain} project path missing: {first_path}"})
+        if domain_dir.exists() and all((domain_dir / filename).exists() for filename in DOMAIN_FILES):
+            findings.append({"level": "OK", "domain": domain, "message": f"{domain} has required domain files"})
+
+    summary = {
+        "active_projects": projects_data["count"],
+        "missing_domain_files": missing_domain_files,
+        "missing_verify_profiles": missing_verify_profiles,
+        "missing_project_paths": missing_project_paths,
+        "approval_packs": artifact_count(root, "approval-packs"),
+    }
+    active_focus = projects_data["projects"][0]["domain"] if projects_data["projects"] else ""
+    return {
+        "root": str(root),
+        "active_focus": active_focus,
+        "summary": summary,
+        "findings": findings,
+    }
+
+
+def print_audit(root: Path) -> None:
+    data = audit_data(root)
+    summary = data["summary"]
+    print("# Brain Audit")
+    print(f"Root: {root}")
+    print("\n## Summary")
+    print(f"Active projects: {summary['active_projects']}")
+    print(f"Active focus: {data['active_focus'] or 'none'}")
+    print(f"Missing domain files: {summary['missing_domain_files']}")
+    print(f"Missing verify profiles: {summary['missing_verify_profiles']}")
+    print(f"Missing project paths: {summary['missing_project_paths']}")
+    print(f"Approval packs: {summary['approval_packs']}")
+    print("\n## Findings")
+    for finding in data["findings"]:
+        print(f"- {finding['level']}: {finding['message']}")
+
+
 def print_json(data: dict) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2))
 
@@ -621,6 +690,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_projects = sub.add_parser("projects", help="List active projects from ACTIVE.md")
     p_projects.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
+    p_audit = sub.add_parser("audit", help="Audit active brain readiness")
+    p_audit.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
     p_log = sub.add_parser("log", help="Append to worklog")
     p_log.add_argument("--domain", required=True)
     p_log.add_argument("--message", required=True)
@@ -708,6 +780,13 @@ def main(argv=None) -> None:
             print_json(active_projects_data(root))
             return
         print_projects(root)
+        return
+
+    if args.command == "audit":
+        if args.json:
+            print_json(audit_data(root))
+            return
+        print_audit(root)
         return
 
     if args.command == "triage":

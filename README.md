@@ -38,6 +38,7 @@ Short form after linking `bin/brain` into PATH:
 
 ```bash
 brain projects
+brain audit
 brain status
 brain triage --domain robbaan
 brain risk-scan --domain robbaan --project /home/mike/projects/robbaan
