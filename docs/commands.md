@@ -102,3 +102,10 @@ For generic automation:
 ```bash
 brain next --json
 ```
+
+For fuzzy plans before implementation, use:
+
+```text
+docs/patterns/grill-with-docs.md
+skills/engineering/grill-with-docs/SKILL.md
+```

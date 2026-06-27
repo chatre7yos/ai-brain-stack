@@ -95,6 +95,11 @@ brain claude
 
 Copy and run the printed command.
 
+Planning/pattern examples:
+
+- `docs/patterns/grill-with-docs.md` shows how to sharpen a fuzzy plan before implementation.
+- `skills/engineering/grill-with-docs/SKILL.md` is an AI Brain Stack-native skill inspired by Matt Pocock's MIT-licensed `grill-with-docs` skill.
+
 ---
 
 ## Install / local setup
@@ -402,8 +407,10 @@ docs/usage.md         CLI examples
 docs/commands.md      Human vs agent command boundaries
 docs/daily-usage.md   Daily workflow guide
 docs/agent-examples.md Agent handoff examples for Codex, Claude Code, and agy
+docs/patterns/        Safe loop/prompt patterns
 templates/out-of-scope.md Scope guard template
 templates/            Starter Markdown templates
+skills/               Optional agent skills adapted for AI Brain Stack
 tests/test_cli.py     Test suite
 ```
 
