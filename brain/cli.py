@@ -185,6 +185,52 @@ def status_data(root: Path) -> dict:
     }
 
 
+def clean_table_cell(value: str) -> str:
+    return value.strip().replace("`", "").strip()
+
+
+def active_projects_data(root: Path) -> dict:
+    active_path = root / "ACTIVE.md"
+    projects: list[dict] = []
+    if not active_path.exists():
+        return {"root": str(root), "source": "ACTIVE.md", "count": 0, "projects": projects}
+    in_table = False
+    for line in active_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("| Domain |"):
+            in_table = True
+            continue
+        if not in_table:
+            continue
+        if not stripped.startswith("|"):
+            if projects:
+                break
+            continue
+        if set(stripped.replace("|", "").replace("-", "").replace(" ", "")) == set():
+            continue
+        cells = [clean_table_cell(cell) for cell in stripped.strip("|").split("|")]
+        if len(cells) < 4 or cells[0].lower() in {"domain", "---"} or cells[0].startswith("---"):
+            continue
+        projects.append({
+            "domain": cells[0],
+            "path_scope": cells[1],
+            "status": cells[2],
+            "next_safe_action": cells[3],
+        })
+    return {"root": str(root), "source": "ACTIVE.md", "count": len(projects), "projects": projects}
+
+
+def print_projects(root: Path) -> None:
+    data = active_projects_data(root)
+    print("# Active Projects")
+    print(f"Root: {root}")
+    if not data["projects"]:
+        print("- None")
+        return
+    for item in data["projects"]:
+        print(f"- {item['domain']} — {item['path_scope']} — {item['status']} — {item['next_safe_action']}")
+
+
 def print_json(data: dict) -> None:
     print(json.dumps(data, ensure_ascii=False, indent=2))
 
@@ -572,6 +618,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_status = sub.add_parser("status", help="Show domains and artifact counts")
     p_status.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
+    p_projects = sub.add_parser("projects", help="List active projects from ACTIVE.md")
+    p_projects.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
     p_log = sub.add_parser("log", help="Append to worklog")
     p_log.add_argument("--domain", required=True)
     p_log.add_argument("--message", required=True)
@@ -652,6 +701,13 @@ def main(argv=None) -> None:
         print("Domains: " + (", ".join(data["domains"]) if data["domains"] else "none"))
         for kind in ARTIFACT_FOLDERS:
             print(f"{kind}: {data['artifacts'][kind]}")
+        return
+
+    if args.command == "projects":
+        if args.json:
+            print_json(active_projects_data(root))
+            return
+        print_projects(root)
         return
 
     if args.command == "triage":

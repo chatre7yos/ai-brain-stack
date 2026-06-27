@@ -245,6 +245,34 @@ Protect Robbaan decisions.
             self.assertIn("## Sources Read", out)
             self.assertIn("domains/robbaan/LOOP.md", out)
             self.assertIn("domains/robbaan/STATE.md", out)
+    def test_projects_lists_active_domains_from_active_md(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import json
+
+            root = Path(tmp)
+            self.run_cli(root, "init", "--domains", "robbaan", "kliktan")
+            (root / "ACTIVE.md").write_text("""# ACTIVE
+
+## Active Domains
+
+| Domain | Path / Scope | Status | Default next safe action |
+|---|---|---|---|
+| `robbaan` | `/home/mike/projects/robbaan` | L1-ready | Draft pilot. |
+| `kliktan` | `/home/mike/projects/kliktan` | L1-ready | Viewport discovery. |
+
+## Explicitly Not Active by Default
+- NEXT only.
+""", encoding="utf-8")
+            out = self.run_cli(root, "projects")
+            self.assertIn("# Active Projects", out)
+            self.assertIn("robbaan", out)
+            self.assertIn("/home/mike/projects/robbaan", out)
+            self.assertIn("kliktan", out)
+            data = json.loads(self.run_cli(root, "projects", "--json"))
+            self.assertEqual(2, data["count"])
+            self.assertEqual("robbaan", data["projects"][0]["domain"])
+            self.assertEqual("Draft pilot.", data["projects"][0]["next_safe_action"])
+
     def test_machine_readable_json_outputs_for_loop_automation(self):
         with tempfile.TemporaryDirectory() as tmp:
             import json
