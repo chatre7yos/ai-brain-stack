@@ -1,4 +1,6 @@
 import io
+import os
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -272,6 +274,32 @@ Protect Robbaan decisions.
             self.assertEqual(2, data["count"])
             self.assertEqual("robbaan", data["projects"][0]["domain"])
             self.assertEqual("Draft pilot.", data["projects"][0]["next_safe_action"])
+
+    def test_bin_brain_uses_env_default_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.run_cli(root, "init", "--domains", "robbaan")
+            (root / "ACTIVE.md").write_text("""# ACTIVE
+
+## Active Domains
+
+| Domain | Path / Scope | Status | Default next safe action |
+|---|---|---|---|
+| `robbaan` | `/home/mike/projects/robbaan` | L1-ready | Keep blocked. |
+""", encoding="utf-8")
+            env = os.environ.copy()
+            env["AI_BRAIN_ROOT"] = str(root)
+            result = subprocess.run(
+                [str(Path(__file__).resolve().parents[1] / "bin" / "brain"), "projects"],
+                cwd=Path(__file__).resolve().parents[1],
+                env=env,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertIn("# Active Projects", result.stdout)
+            self.assertIn("robbaan", result.stdout)
+            self.assertIn("Keep blocked.", result.stdout)
 
     def test_machine_readable_json_outputs_for_loop_automation(self):
         with tempfile.TemporaryDirectory() as tmp:

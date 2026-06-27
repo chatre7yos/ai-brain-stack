@@ -34,6 +34,20 @@ It does not edit application code, commit, push, publish, open tunnels, or touch
 
 ## Usage
 
+Short form after linking `bin/brain` into PATH:
+
+```bash
+brain projects
+brain status
+brain triage --domain robbaan
+brain risk-scan --domain robbaan --project /home/mike/projects/robbaan
+brain approval-pack --domain robbaan --project /home/mike/projects/robbaan --task "admin listing row"
+```
+
+The shortcut defaults to `$HOME/ai-brain`; override with `AI_BRAIN_ROOT=/path/to/brain` or pass `--root` explicitly.
+
+Module form still works everywhere:
+
 ```bash
 python3 -m brain.cli --root ./my-brain init --domains robbaan kliktan video-os
 python3 -m brain.cli --root ./my-brain log --domain robbaan --message "Checked state"
@@ -42,6 +56,8 @@ python3 -m brain.cli --root ./my-brain task add --domain robbaan --title "Define
 python3 -m brain.cli --root ./my-brain status
 python3 -m brain.cli --root ./my-brain triage --domain robbaan
 ```
+
+See `docs/usage.md` for shortcut installation and examples.
 
 ## For other agents
 

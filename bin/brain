@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+DEFAULT_ROOT="${AI_BRAIN_ROOT:-${BRAIN_ROOT:-$HOME/ai-brain}}"
+
+has_root=0
+for arg in "$@"; do
+  if [[ "$arg" == "--root" || "$arg" == --root=* ]]; then
+    has_root=1
+    break
+  fi
+done
+
+cd "$REPO_ROOT"
+if [[ "$has_root" == "1" ]]; then
+  exec python3 -m brain.cli "$@"
+fi
+exec python3 -m brain.cli --root "$DEFAULT_ROOT" "$@"
